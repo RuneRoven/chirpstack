@@ -1,7 +1,6 @@
-
+#https://github.com/deepshore/chirpstack-kubernetes/blob/main/kustomize/chirpstack/service.yaml
 general:
-  nameOverride: ""
-  fullnameOverride: ""
+  namespace: "chirpstack"
 
   serviceAccount:
     # Specifies whether a service account should be created
@@ -11,20 +10,6 @@ general:
     # The name of the service account to use.
     # If not set and create is true, a name is generated using the fullname template
     name: ""
-
-  podAnnotations: {}
-
-  podSecurityContext: {}
-    # fsGroup: 2000
-
-  securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
-
 
 
 chirpstack:

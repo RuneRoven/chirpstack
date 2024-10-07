@@ -4,12 +4,13 @@ metadata:
   labels:
     app: chirpstack
   name: chirpstack
+  namespace: {{ "general.namespace" | default "chirpstack" }}
 spec:
   ports:
   - name: web
-    port: 8080
+    port: {{ .Values.chirpstack.service.port }}
     protocol: TCP
-    targetPort: 8080
+    targetPort: {{ .Values.chirpstack.service.port }}
   selector:
     app: chirpstack
-  type: ClusterIP
+  type: {{ .Values.chirpstack.service.type || default "ClusterIP" }}
