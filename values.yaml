@@ -1,0 +1,58 @@
+
+general:
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+
+
+chirpstack:
+  replicaCount: 1
+  image:
+    repository: chirpstack/chirpstack
+    pullPolicy: IfNotPresent
+    tag: "4"
+
+  imagePullSecrets: []
+
+  service:
+    port: 8080
+    type: ClusterIP
+
+  volumeMounts: 
+    name: configuration
+    mountPath: /etc/chirpstack
+
+  volumes: 
+    name: configuration
+    configMap:
+      name: chirpstack-configuration
+
+gateway-bridge:
+
+api:
+
+postgresql:
+
+redis:

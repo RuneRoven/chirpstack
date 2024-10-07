@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chirpstack
+spec:
+  selector:
+    matchLabels:
+      {{- include "chirpstack.selectorLabels" . | nindent 6 }}
+  serviceName: "chirpstack"
+  replicas: 1 
+  template:
+    metadata:
+      name: {{ include "chirpstack.fullname" . }}
+      labels:
+        {{- include "chirpstack.labels" . | nindent 4 }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.chirpstack.image.repository }}:{{ .Values.chirpstack.image.tag | default .Chart.AppVersion }}"
+        args:
+        - "-c"
+        - "/etc/chirpstack"
+        imagePullPolicy: {{ .Values.chirpstack.image.pullPolicy }}
+        env:
+        - name: MQTT_BROKER_HOST
+          value: mosquitto
+        - name: REDIS_HOST
+          value: redis
+        - name: POSTGRESQL_HOST
+          value: postgres
+        ports:
+        - containerPort: {{ .Values.chirpstack.service.port }}
+          name: web
+        volumeMounts:
+        - name: {{ .Values.chirpstack.volumeMounts.name }}
+          mountPath: {{ .Values.chirpstack.volumeMounts.mountPath }}
+      volumes: 
+      - name: {{ .Values.chirpstack.volumes.name }}
+        configMap:
+          name: {{ .Values.chirpstack.volumes.configMap.name }}
