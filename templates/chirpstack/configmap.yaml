@@ -1,0 +1,52 @@
+apiVersion: v2
+kind: ConfigMap
+metadata:
+  name: chirpstack-configuration
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+data:
+  chirpstack.toml: |
+    {{- $tomlFile := .Files.Get (printf "configurations/chirpstack/%s" .Values._common.configFile) }}
+
+    {{- if .Values._common.postgres.external.enabled }}
+    {{- $tomlFile = regexReplaceAll "chirpstack:chirpstack@\\$POSTGRESQL_HOST/chirpstack" $tomlFile (printf "%s:%s@%s:%s/%s" .Values._common.postgres.settings.role .Values._common.postgres.settings.password .Values._common.postgres.external.host (toString .Values._common.postgres.external.port) .Values._common.postgres.settings.dbName) }}
+    {{- else }}
+    {{- $tomlFile = regexReplaceAll "chirpstack:chirpstack@\\$POSTGRESQL_HOST/chirpstack" $tomlFile (printf "%s:%s@postgres.%s.svc.cluster.local:%s/%s" .Values._common.postgres.settings.role .Values._common.postgres.settings.password .Values._common.namespace (toString .Values.postgres.service.port) .Values._common.postgres.settings.dbName) }}
+    {{- end }}
+
+    {{- if .Values._common.redis.external.enabled }}
+    {{- $tomlFile = regexReplaceAll "[$]REDIS_HOST" $tomlFile (printf "%s:%s" .Values._common.redis.service.host  (toString .Values._common.redis.service.port)) }}
+    {{- else }}
+    {{- $tomlFile = regexReplaceAll "[$]REDIS_HOST" $tomlFile (printf "redis.%s.svc.cluster.local:%s" .Values._common.namespace  (toString .Values.redis.service.port)) }}
+    {{- end }}
+    
+    {{- $tomlFile = regexReplaceAll "net_id\\s*=\\s*\"000000\"" $tomlFile (printf "net_id=\"%s\"" .Values._common.netId) }}
+
+
+    {{- $enabledRegions := list }}
+    {{- range $index, $region := .Values._common.region }}
+      {{- $enabledRegions = append $enabledRegions (printf "\"%s\"" $region.name) }}
+    {{- end }}
+    {{- $enabledRegionsStr := join ", " $enabledRegions }}
+    {{- $tomlFile = regexReplaceAll "(enabled_regions\\s*=\\s*\\[)[^\\]]*\\]" $tomlFile (printf "${1}%s]" $enabledRegionsStr) }}
+
+    {{- $tomlFile = regexReplaceAll "bind\\s*=\\s*\"0.0.0.0:8080\"" $tomlFile (printf "bind=\"0.0.0.0:%s\"" (toString .Values.chirpstack.service.port)) }}
+
+    {{- $tomlFile = regexReplaceAll "secret\\s*=\\s*\"you-must-replace-this\"" $tomlFile (printf "secret=\"%s\"" (toString .Values._common.secret)) }}
+    secret="you-must-replace-this"
+
+    {{- $tomlFile = regexReplaceAll "[$]MQTT_BROKER_HOST:1883" $tomlFile (printf "%s:%s" .Values._common.mqtt.host (toString .Values._common.mqtt.port)) }}
+    
+    {{- $tomlFile | nindent 4 }}
+
+
+{{- range $index, $region := .Values._common.region }}
+  region_{{ $region.name }}.toml: |
+    {{- $filePath := printf "configurations/chirpstack/region_%s.toml" $region.name }}
+    {{- $rawFile := $.Files.Get $filePath }}
+    {{- $modifiedFile := regexReplaceAll "server\\s*=\\s*\"tcp://[$]MQTT_BROKER_HOST:1883\"" $rawFile (printf "server=\"tcp://%s:%s\"" $.Values._common.mqtt.host (toString $.Values._common.mqtt.port)) }}
+    {{- $modifiedFile = regexReplaceAll "username\\s*=\\s*\"\"" $modifiedFile (printf "username=\"%s\"" $.Values._common.mqtt.username) }}
+    {{- $modifiedFile = regexReplaceAll "password\\s*=\\s*\"\"" $modifiedFile (printf "password=\"%s\"" $.Values._common.mqtt.password) }}
+    {{- $modifiedFile = regexReplaceAll "qos\\s*=\\s*0" $modifiedFile (printf "qos=%s" (toString $.Values._common.mqtt.qos)) }}
+{{ $modifiedFile | indent 4 }}
+{{- end }}
+

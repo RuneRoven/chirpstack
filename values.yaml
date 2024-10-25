@@ -1,7 +1,33 @@
-#https://github.com/deepshore/chirpstack-kubernetes/blob/main/kustomize/chirpstack/service.yaml
-general:
-  namespace: "chirpstack"
 
+_common:
+  namespace: "chirpstack"
+  configFile: "chirpstack.toml"
+  region:
+    - name: "eu868"
+    - name: "eu433"
+  netId: "123456"
+  secret: "kebab"
+  mqtt:
+    host: broker.local
+    port: 1883
+    username: user
+    password: pass
+    qos: 2
+  postgres:
+    settings: 
+      postgresUser: chirpstack2
+      dbName: chirpstack2
+      role: chirpstack2
+      password: chirpstack2
+    external: 
+      enabled: false
+      host: gres.local
+      port: 1234
+  redis: 
+    external:
+      enabled: false
+      host: local.redis
+      port: 1234    
   serviceAccount:
     # Specifies whether a service account should be created
     create: true
@@ -18,9 +44,9 @@ chirpstack:
     repository: chirpstack/chirpstack
     pullPolicy: IfNotPresent
     tag: "4"
-
-  imagePullSecrets: []
-
+  args: 
+    - "-c"
+    - "/etc/chirpstack"
   service:
     port: 8080
     type: ClusterIP
@@ -34,10 +60,80 @@ chirpstack:
     configMap:
       name: chirpstack-configuration
 
-gateway-bridge:
-
 api:
+  image:
+    repository: chirpstack/chirpstack-rest-api
+    pullPolicy: IfNotPresent
+    tag: "4"
+  args: 
+    - "--server"
+    - "chirpstack:8080"
+    - "--bind"
+    - "0.0.0.0:8090"
+    - "--insecure"
+  service:
+    port: 8090
+    type: ClusterIP
 
-postgresql:
+gb: # BYT CONFIGMAP!!!
+  image:
+    repository: chirpstack/chirpstack-gateway-bridge
+    pullPolicy: IfNotPresent
+    tag: "4"
+  volumeMounts:
+    mountPath: /etc/chirpstack-gateway-bridge
+  volumes:
+    configMap:
+      name: chirpstack-gateway-bridge-eu868-configuration
+  service:
+    port: 1700
+    type: ClusterIP
+  config: |
+    # See https://www.chirpstack.io/gateway-bridge/install/config/ for a full
+    # configuration example and documentation.
 
+    [integration.mqtt.auth.generic]
+    servers=["tcp://mosquitto:1883"]
+    username=""
+    password=""
+
+    [integration.mqtt]
+    event_topic_template="eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
+    state_topic_template="eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
+    command_topic_template="eu868/gateway/{{ .GatewayID }}/command/#"
+
+postgres:
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "14-alpine"
+  service:
+    port: 5432
+    type: ClusterIP
+  volumeMounts: 
+    name: data
+    mountPath: /var/lib/postgresql/data
+  volumes: 
+    initdb:
+      configMap:
+        name: postgres-initdb
+  volumeClaim:
+    resources:
+        requests:
+          storage: 500Mi
+      
 redis:
+  image:
+    repository: redis
+    pullPolicy: IfNotPresent
+    tag: "7-alpine"
+  service:
+    port: 6379
+    type: ClusterIP
+  volumeMounts: 
+    name: data
+    mountPath: /data
+  volumeClaim:
+    resources:
+        requests:
+          storage: 100Mi

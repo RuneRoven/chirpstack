@@ -1,0 +1,8 @@
+apiVersion: v2
+kind: ConfigMap
+metadata:
+  name: chirpstack-gb
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+data:
+  chirpstack-gateway-bridge.toml: |
+{{ .Values.gb.config | indent 4 }}

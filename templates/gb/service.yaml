@@ -2,15 +2,15 @@ apiVersion: v2
 kind: Service
 metadata:
   labels:
-    app: chirpstack
-  name: chirpstack
+    app: chirpstack-gb
+  name: chirpstack-gb
   namespace: {{ .Values._common.namespace | default "chirpstack" }}
 spec:
   ports:
-  - name: web
+  - name: udp
     port: {{ .Values.chirpstack.service.port }}
-    protocol: TCP
+    protocol: udp
     targetPort: {{ .Values.chirpstack.service.port }}
   selector:
-    app: chirpstack
+    app: chirpstack-gb
   type: {{ .Values.chirpstack.service.type | default "ClusterIP" }}

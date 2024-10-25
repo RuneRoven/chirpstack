@@ -1,0 +1,30 @@
+apiVersion: apps/v2
+kind: Deployment
+metadata:
+  labels:
+    app: chirpstack-gb
+  name: chirpstack-gb
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chirpstack-gb
+  template:
+    metadata:
+      labels:
+        app: chirpstack-gb
+    spec:
+      containers:
+      - name: chirpstack-gb
+        image: "{{ .Values.gb.image.repository }}:{{ .Values.gb.image.tag | default "chirpstack/chirpstack-gateway-bridge:4" }}"
+        imagePullPolicy: {{ .Values.gb.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.gb.service.port }}
+        volumeMounts:
+        - name: configuration 
+          mountPath: {{ .Values.gb.volumeMounts.mountPath | default "/etc/chirpstack-gateway-bridge"}} 
+      volumes:
+      - name: configuration 
+        configMap:
+          name:  {{ .Values.gb.volumes.configMap.name | default "chirpstack-gateway-bridge-eu868-configuration"}} 
