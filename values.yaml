@@ -3,31 +3,101 @@ _common:
   namespace: "chirpstack"
   configFile: "chirpstack.toml"
   region:
-    - name: "eu868"
-    - name: "eu433"
+    - name: "eu868" # name on region to enable for the chart to select the correct settings file
+      settings: 
+        gateway:
+          private : false  # If enabled, gateways can only be used by devices under the same tenant.
+          enabledBackend: "mqtt" # The enabled backend type.
+          eventTopic: "eu868/gateway/+/event/+" # Event topic template. Optional. Default "<region name>/gateway/+/event/+"
+          commandTopic: "eu868/gateway/{{ gateway_id }}/command/{{ command }}" # Command topic template. Optional. Default "<region name>/gateway/{{ gateway_id }}/command/{{ command }}"
+          installationMargin: 10  # Installation margin (dB) used by the ADR engine.
+          # A higher number means that the network-server will keep more margin,
+          # resulting in a lower data-rate but decreasing the chance that the
+          # device gets disconnected because it is unable to reach one of the
+          # surrounded gateways.
+          rxWindow: 0  # RX window (Class-A).
+          # Set this to:
+          # 0: RX1 / RX2
+          # 1: RX1 only
+          # 2: RX2 only
+          rx1Delay: 1 # RX1 delay (1 - 15 seconds).
+          rx1DrOffset: 0 # RX1 data-rate offset
+          rx2Dr: 0 # RX2 data-rate
+          rx2PreferOnRx1DrLt: 0 # Prefer RX2 on RX1 data-rate less than.
+          # Prefer RX2 over RX1 based on the RX1 data-rate. When the RX1 data-rate
+          # is smaller than the configured value, then the Network Server will
+          # first try to schedule the downlink for RX2, failing that (e.g. the gateway
+          # has already a payload scheduled at the RX2 timing) it will try RX1.
+          rx2PreferOnLinkBudget: false 
+          # Prefer RX2 on link budget.
+          # When the link-budget is better for RX2 than for RX1, the Network Server will first
+          # try to schedule the downlink in RX2, failing that it will try RX1.
+          downlinkTxPower: -1 # Downlink TX Power (dBm)
+          # When set to -1, the downlink TX Power from the configured band will
+          # be used.
+          # Please consult the LoRaWAN Regional Parameters and local regulations
+          # for valid and legal options. Note that the configured TX Power must be
+          # supported by your gateway(s).
+          adrDisabled: false # ADR is disabled.
+          minDr: 0 # Minimum data-rate.
+          max_dr: 5 # Maximum data-rate.
+        network: 
+          rejoinRequest:
+            enabled: false # Request devices to periodically send rejoin-requests.
+            maxCount: 0 # The device must send a rejoin-request type 0 at least every 2^(max_count_n + 4) uplink messages. Valid values are 0 to 15.
+            maxTime: 0 # The device must send a rejoin-request type 0 at least every 2^(max_time_n + 10) seconds. Valid values are 0 to 15. # 0  = roughly 17 minutes. 15 = about 1 year
+          classB:
+            pingSlotDr: 0 # Ping-slot data-rate. # set this to 0 to use the default frequency plan for the configured region (which could be frequency hopping).
+            pingSlotFrequency: 0 # Ping-slot frequency (Hz). 
+  #  - name: "eu433"
   netId: "123456"
-  secret: "kebab"
+  secret: "kebab" # This secret is used for generating login and API tokens, make sure this
+  # is never exposed. Changing this secret will invalidate all login and API
+  # tokens. The following command can be used to generate a random secret:
+  #   openssl rand -base64 32
+  logging: "idle"   # Options are: trace, debug, info, warn error.
+  apiPort: "8080"   # port to bind the API interface to.
+  gatewayBridge:
+
   mqtt:
     host: broker.local
     port: 1883
     username: user
     password: pass
     qos: 2
+    cleanSession: false
+    clientId: "chirpstack"
+    caCert: "none"
+    tlsCert: "none"
+    tlsKey: "none"
+
   postgres:
     settings: 
       postgresUser: chirpstack2
       dbName: chirpstack2
       role: chirpstack2
       password: chirpstack2
+      sslmode: "disable"
+      # SSL mode options:
+      #  * disable - no SSL
+      #  * require - Always SSL (skip verification)
+      #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
+      #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+      maxOpenConnections: 10 # This sets the max. number of open connections that are allowed in the PostgreSQL connection pool.
+      minIdleConnections: 0 # This sets the min. number of idle connections in the PostgreSQL connection pool (0 = equal to max_open_connections).
     external: 
       enabled: false
       host: gres.local
       port: 1234
   redis: 
+    settings:
+      tls: false
+      cluster : false 
     external:
       enabled: false
       host: local.redis
-      port: 1234    
+      port: 1234  
+       
   serviceAccount:
     # Specifies whether a service account should be created
     create: true
@@ -88,19 +158,192 @@ gb: # BYT CONFIGMAP!!!
   service:
     port: 1700
     type: ClusterIP
+  useCommonMqttSettings: true
+  useCommonRegionSettings: true
+  # If using useCommonMqttSettings and useCommonRegionSettings region and mqtt values are populated in the config automatically
   config: |
-    # See https://www.chirpstack.io/gateway-bridge/install/config/ for a full
-    # configuration example and documentation.
+    [general]
+    # debug=5, info=4, warning=3, error=2, fatal=1, panic=0
+    log_level=4
 
-    [integration.mqtt.auth.generic]
-    servers=["tcp://mosquitto:1883"]
-    username=""
-    password=""
+    # Log to syslog.
+    #
+    # When set to true, log messages are being written to syslog.
+    log_to_syslog=false
 
-    [integration.mqtt]
-    event_topic_template="eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
-    state_topic_template="eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
-    command_topic_template="eu868/gateway/{{ .GatewayID }}/command/#"
+
+    # Filters.
+    #
+    # These can be used to filter LoRaWAN frames to reduce bandwith usage between
+    # the gateway and ChirpStack Gateway Bridge. Depending the used backend, filtering
+    # will be performed by the Packet Forwarder or ChirpStack Gateway Bridge.
+    [filters]
+
+    # NetIDs filters.
+    #
+    # The configured NetIDs will be used to filter uplink data frames.
+    # When left blank, no filtering will be performed on NetIDs.
+    #
+    # Example:
+    # net_ids=[
+    #   "000000",
+    #   "000001",
+    # ]
+    net_ids=[
+    ]
+
+    # JoinEUI filters.
+    #
+    # The configured JoinEUI ranges will be used to filter join-requests.
+    # When left blank, no filtering will be performed on JoinEUIs.
+    #
+    # Example:
+    # join_euis=[
+    #   ["0000000000000000", "00000000000000ff"],
+    #   ["000000000000ff00", "000000000000ffff"],
+    # ]
+    join_euis=[
+    ]
+
+
+    # Gateway backend configuration.
+    [backend]
+
+    # Backend type.
+    #
+    # Valid options are:
+    #   * semtech_udp
+    #   * concentratord
+    #   * basic_station
+    type="semtech_udp"
+
+      # Semtech UDP packet-forwarder backend.
+      [backend.semtech_udp]
+
+      # ip:port to bind the UDP listener to
+      #
+      # Example: 0.0.0.0:1700 to listen on port 1700 for all network interfaces.
+      # This is the listener to which the packet-forwarder forwards its data
+      # so make sure the 'serv_port_up' and 'serv_port_down' from your
+      # packet-forwarder matches this port.
+      udp_bind = "0.0.0.0:1700"
+
+      # Skip the CRC status-check of received packets
+      #
+      # This is only has effect when the packet-forwarder is configured to forward
+      # LoRa frames with CRC errors.
+      skip_crc_check = false
+
+      # Fake RX timestamp.
+      #
+      # Fake the RX time when the gateway does not have GPS, in which case
+      # the time would otherwise be unset.
+      fake_rx_time=false
+
+
+      # ChirpStack Concentratord backend.
+      [backend.concentratord]
+
+      # Check for CRC OK.
+      crc_check=true
+
+      # Event API URL.
+      event_url="ipc:///tmp/concentratord_event"
+
+      # Command API URL.
+      command_url="ipc:///tmp/concentratord_command"
+
+
+      # Basic Station backend.
+      [backend.basic_station]
+
+      # ip:port to bind the Websocket listener to.
+      bind=":3001"
+
+      # TLS certificate and key files.
+      #
+      # When set, the websocket listener will use TLS to secure the connections
+      # between the gateways and ChirpStack Gateway Bridge (optional).
+      tls_cert=""
+      tls_key=""
+
+      # TLS CA certificate.
+      #
+      # When configured, ChirpStack Gateway Bridge will validate that the client
+      # certificate of the gateway has been signed by this CA certificate.
+      ca_cert=""
+
+      # Stats interval.
+      #
+      # This defines the interval in which the ChirpStack Gateway Bridge forwards
+      # the uplink / downlink statistics.
+      stats_interval="30s"
+
+      # Ping interval.
+      ping_interval="1m0s"
+
+      # Timesync interval.
+      #
+      # This defines the interval in which the ChirpStack Gateway Bridge sends
+      # a timesync request to the gateway. Setting this to 0 disables sending
+      # timesync requests.
+      timesync_interval="1h0m0s"
+
+      # Read timeout.
+      #
+      # This interval must be greater than the configured ping interval.
+      read_timeout="1m5s"
+
+      # Write timeout.
+      write_timeout="1s"
+
+    # Integration configuration.
+    [integration]
+    # Payload marshaler.
+    #
+    # This defines how the MQTT payloads are encoded. Valid options are:
+    # * protobuf:  Protobuf encoding
+    # * json:      JSON encoding (easier for debugging, but less compact than 'protobuf')
+    marshaler="protobuf"
+
+      # MQTT integration configuration.
+      [integration.mqtt]
+      # Event topic template.
+      event_topic_template="gateway/{{ .GatewayID }}/event/{{ .EventType }}"
+
+      # State topic template.
+      #
+      # States are sent by the gateway as retained MQTT messages (by default)
+      # so that the last message will be stored by the MQTT broker. When set to
+      # a blank string, this feature will be disabled. This feature is only
+      # supported when using the generic authentication type.
+      state_topic_template="gateway/{{ .GatewayID }}/state/{{ .StateType }}"
+
+      # Command topic template.
+      command_topic_template="gateway/{{ .GatewayID }}/command/#"
+
+      # State retained.
+      #
+      # By default this value is set to true and states are published as retained
+      # MQTT messages. Setting this to false means that states will not be retained
+      # by the MQTT broker.
+      state_retained=true
+
+      # Keep alive will set the amount of time (in seconds) that the client should
+      # wait before sending a PING request to the broker. This will allow the client
+      # to know that a connection has not been lost with the server.
+      # Valid units are 'ms', 's', 'm', 'h'. Note that these values can be combined, e.g. '24h30m15s'.
+      keep_alive="30s"
+
+      # Maximum interval that will be waited between reconnection attempts when connection is lost.
+      # Valid units are 'ms', 's', 'm', 'h'. Note that these values can be combined, e.g. '24h30m15s'.
+      max_reconnect_interval="1m0s"
+
+      # Terminate on connect error.
+      #
+      # When set to true, instead of re-trying to connect, the ChirpStack Gateway Bridge
+      # process will be terminated on a connection error.
+      terminate_on_connect_error=false
 
 postgres:
   image:
