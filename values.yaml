@@ -129,7 +129,239 @@ chirpstack:
     name: configuration
     configMap:
       name: chirpstack-configuration
-
+  region:
+    - name: "eu868" # name on region to enable for the chart to select the correct settings file
+      settings: 
+        gateway:
+          private : false  # If enabled, gateways can only be used by devices under the same tenant.
+          enabledBackend: "mqtt" # The enabled backend type.
+          installationMargin: 10  # Installation margin (dB) used by the ADR engine.
+          # A higher number means that the network-server will keep more margin,
+          # resulting in a lower data-rate but decreasing the chance that the
+          # device gets disconnected because it is unable to reach one of the
+          # surrounded gateways.
+          rxWindow: 0  # RX window (Class-A).
+          # Set this to:
+          # 0: RX1 / RX2
+          # 1: RX1 only
+          # 2: RX2 only
+          rx1Delay: 1 # RX1 delay (1 - 15 seconds).
+          rx1DrOffset: 0 # RX1 data-rate offset
+          rx2Dr: 0 # RX2 data-rate
+          rx2PreferOnRx1DrLt: 0 # Prefer RX2 on RX1 data-rate less than.
+          # Prefer RX2 over RX1 based on the RX1 data-rate. When the RX1 data-rate
+          # is smaller than the configured value, then the Network Server will
+          # first try to schedule the downlink for RX2, failing that (e.g. the gateway
+          # has already a payload scheduled at the RX2 timing) it will try RX1.
+          rx2PreferOnLinkBudget: false 
+          # Prefer RX2 on link budget.
+          # When the link-budget is better for RX2 than for RX1, the Network Server will first
+          # try to schedule the downlink in RX2, failing that it will try RX1.
+          downlinkTxPower: -1 # Downlink TX Power (dBm)
+          # When set to -1, the downlink TX Power from the configured band will
+          # be used.
+          # Please consult the LoRaWAN Regional Parameters and local regulations
+          # for valid and legal options. Note that the configured TX Power must be
+          # supported by your gateway(s).
+          adrDisabled: false # ADR is disabled.
+          minDr: 0 # Minimum data-rate.
+          max_dr: 5 # Maximum data-rate.
+        network: 
+          rejoinRequest:
+            enabled: false # Request devices to periodically send rejoin-requests.
+            maxCount: 0 # The device must send a rejoin-request type 0 at least every 2^(max_count_n + 4) uplink messages. Valid values are 0 to 15.
+            maxTime: 0 # The device must send a rejoin-request type 0 at least every 2^(max_time_n + 10) seconds. Valid values are 0 to 15. # 0  = roughly 17 minutes. 15 = about 1 year
+          classB:
+            pingSlotDr: 0 # Ping-slot data-rate. # set this to 0 to use the default frequency plan for the configured region (which could be frequency hopping).
+            pingSlotFrequency: 0 # Ping-slot frequency (Hz). 
+    #- name: "eu433"
+  config: 
+    logging: 
+      level: "idle"   # Options are: trace, debug, info, warn error.
+      extra: |
+        # extra settings not included in helm chart
+    postgresql:
+      extra: |
+        # extra settings for postgresql not included from the common
+    redis: 
+      extra: |
+        # extra settings for redis not included from the common
+    api: 
+      interface: "0.0.0.0"
+      port: "8080"   # port to bind the API interface to.
+      secret: "iLikePink" # This secret is used for generating login and API tokens, make sure this
+      # is never exposed. Changing this secret will invalidate all login and API
+      # tokens. The following command can be used to generate a random secret:
+      #   openssl rand -base64 32
+      extra: |
+        # extra settings for api not included in helm chart
+    gateway: 
+        # CA certificate and key file (optional).
+        # If setting the CA certificate and key file options, ChirpStack 
+        # will generate client certificates which can be used by the gateway for
+        # authentication and authorization. The Common Name of the certificate will
+        # be set to the Gateway ID.
+        #
+        # The ca_key is expected to be in PKCS#8 format (you can use openssl to
+        # convert to PKCS#8).
+      caCert: ""
+      caKey: ""
+      clientCertLiftime: "11months 30days 3h 50m 24s" # This defines how long (after generating) the certificate remains valid.
+      allowUnknownGateways: false  # If set to true, then uplinks received from gateways not configured in ChirpStack will be allowed.
+      extra: |
+        # extra settings not included in helm chart
+    network: # all network settings except regions which is set in chirpstack.region
+      netId: "000000" # Network identifier (NetID, 3 bytes) encoded as HEX (e.g. 010203).
+      secondaryNetIds: []
+      devAddrPrefixes: []
+      deduplicationDelay: "200ms"
+      macCommandsDisabled: false
+      adrPlugins: []
+      scheduler: 
+        interval: "1s"
+        classALockDuration: "5s"
+        classCLockDuration: "5s"
+        multicastClassCMargin: "5s"
+        multicastClassBMargin: "5s"
+        extra: |
+        # extra settings for network scheduler not included in helm chart
+      extra: |
+        # extra settings for network not included in helm chirpstack-configuration
+    monitoring: 
+      bind: ""
+      backendInterfacesLogMaxHistory: 10
+      metaLogMaxHistory: 10
+      gatewayFrameLogMaxHistory: 10
+      deviceFrameLogMaxHistory: 10
+      deviceEventLogMaxHistory: 10
+      perGatewayFrameLogMaxHistory: 10
+      perGatewayFrameLogTtl: "1month 13h 26m 24s"
+      perDeviceFrameLogMaxHistory: 10
+      perDeviceFrameLogTtl: "1month 13h 26m 24s"
+      perDeviceEventLogMaxHistory: 10
+      perDeviceEventLogTtl: "1month 13h 26m 24s"
+      extra: |
+        # extra settings for api not included in helm chart
+    integration:
+      enabled: # integrations to enable for chirpstack
+        - "mqtt" 
+      mqtt: 
+        eventTopic: "application/{{application_id}}/device/{{dev_eui}}/event/{{event}}" # Event topic template.
+        commandTopic: "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}" # Command topic template. 
+        json: true # Use JSON encoding instead of Protobuf (binary).
+        keepAliveInterval: "30s"
+        client: 
+          caCert: ""
+          caKey: ""
+          clientCertLiftime: "11months 30days 3h 50m 24s"
+          extra: |
+            # extra settings for mqtt client integration not included in helm chart
+        extra: |
+          # extra settings for mqtt integration not included in helm chart
+      postgresql:
+        dsn: "postgresql://chirpstack_integration:chirpstack_integration@localhost/chirpstack_integration?sslmode=disable"
+        maxOpenConnections: 10
+        caCert: ""
+        extra: |
+          # extra settings for postgresql integration not included in helm chart
+      amqp:
+        url: "amqp://guest:guest@localhost:5672"
+        eventRoutingKey: "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}"
+        json: true
+        extra: |
+          # extra settings for amqp integration not included in helm chart
+      kafka:
+        brokers:
+          - "localhost:9092"
+        tls: false
+        topic: "chirpstack"
+        eventKey: "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}"
+        username: ""
+        password: ""
+        mechanism: "PLAIN"
+        json: true
+        extra: |
+          # extra settings for kafka integration not included in helm chart
+    codec:
+      codecJs:
+        maxExecutionTime: "100ms"
+        extra: |
+          # extra settings for codecJS not included in helm chart
+      extra: |
+          # extra settings for codec not included in helm chart
+    userAuthentication:
+      enabled: "openid_connect" # or "internal" or "oauth2"
+      openidConnect:
+        registrationEnabled: true
+        registrationCallbackUrl: "https://example.com/callback"
+        providerUrl: "https://auth.example.com"
+        clientId: "example-client-id"
+        clientSecret: "example-client-secret"
+        redirectUrl: "https://example.com/auth/oidc/callback"
+        logoutUrl: "https://example.com/logout"
+        loginRedirect: true
+        loginLabel: "Login with OpenID"
+        assumeEmailVerified: true
+        scopes:
+          - email
+          - profile
+        extra: |
+          # extra settings for userAuthentication openidConnect not included in helm chart
+      oauth2:
+        provider: "clerk" # or another supported provider
+        registrationEnabled: false
+        registrationCallbackUrl: "https://example.com/oauth2-callback"
+        clientId: "oauth2-client-id"
+        clientSecret: "oauth2-client-secret"
+        authUrl: "https://auth.example.com/oauth2/auth"
+        tokenUrl: "https://auth.example.com/oauth2/token"
+        userinfoUrl: "https://auth.example.com/oauth2/userinfo"
+        redirectUrl: "https://example.com/auth/oauth2/callback"
+        logoutUrl: "https://example.com/logout"
+        loginRedirect: false
+        loginLabel: "Login with OAuth2"
+        assumeEmailVerified: false
+        scopes:
+          - email
+        extra: |
+          # extra settings for userAuthentication oauth2 not included in helm chart
+      extra: |
+          # extra settings for userAuthentication not included in helm chart
+    joinServer:
+      extra: |
+        # extra settings for joinServer not included in helm chart
+    backendInterfaces:
+      bind: ""
+      caCert: ""
+      tlsCert: ""
+      tlsKey: ""
+      extra: |
+        # extra settings for backendInterfaces not included in helm chart
+    roaming: 
+      resolveNetIdDomainSuffix: ""
+      default: 
+        enabled: false
+        asyncTimeout: "0s"
+        passiveRoamingLifetime: "0s"
+        passiveRoamingKekLabel: ""
+        passiveRoamingValidateMic: false
+        server: ""
+        useTargetRoleSuffix: false
+        caCert: ""
+        tlsCert: ""
+        tlsKey: ""
+        authorizationHeader: ""
+        extra: |
+          # extra settings for roaming default not included in helm chart
+      extra: |
+        # extra settings for roaming not included in helm chart
+    ui:
+      tileserver: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      mapAttribution: "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors"
+      extra: |
+        # extra settings for ui not included in helm chart
+    extra: |
+      # extra config fields not included in the helm chart.
 api:
   image:
     repository: chirpstack/chirpstack-rest-api
@@ -145,7 +377,7 @@ api:
     port: 8090
     type: ClusterIP
 
-gb: # BYT CONFIGMAP!!!
+gb:  
   image:
     repository: chirpstack/chirpstack-gateway-bridge
     pullPolicy: IfNotPresent
