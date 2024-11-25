@@ -324,15 +324,93 @@ gb:
     port: 1700
     type: ClusterIP
   useCommonMqttSettings: true # mqtt values are populated in the config automatically from common mqtt settings, otherwise it needs to be specified in the config section.
-  config: # config key must exist but all sub-keys are optional.
+  config:
+    general:
+      logLevel: 4
+      logJson: false
+      logToSyslog: false
+    filters:
+      netIds: []
+      joinEuis: []
+    backend: 
+      type: "semtech_udp"
+      semtechUdp:
+        udpBind: "0.0.0.0:1700"
+        fakeRxTime: false
+      concentratord:
+        eventUrl: "ipc:///tmp/concentratord_event"
+        commandUrl: "ipc:///tmp/concentratord_command"
+      basicStation:
+        bind: ":3001"
+        tlsCert: ""
+        tlsKey: ""
+        caCert: ""
+        statsInterval: "30s"
+        pingInterval: "1m0s"
+        timesyncInterval: "0s"
+        readTimeout: "1m5s"
+        writeTimeout: "1s"
     integration:
       marshaler: "protobuf"
       mqtt:
         eventTopicTemplate: "gateway/{{ .GatewayID }}/event/{{ .EventType }}"
         stateTopicTemplate: "gateway/{{ .GatewayID }}/state/{{ .StateType }}"
         commandTopicTemplate: "gateway/{{ .GatewayID }}/command/#"
+        stateRetained: true
+        keepAlive: "30s"
+        maxReconnectInterval: "1m0s"
+        terminateOnConnectError: false
+        auth:
+          type: "generic"
+          generic:
+            servers:
+              - "tcp://127.0.0.1:1883"
+            username: ""
+            password: ""
+            qos: 0
+            cleanSession: true
+            clientId: ""
+            caCert: ""
+            tlsCert: ""
+            tlsKey: ""
+          gcpCloudIotCore:
+            server: "ssl://mqtt.googleapis.com:8883"
+            deviceId: ""
+            projectId: ""
+            cloudRegion: ""
+            registryId: ""
+            jwtExpiration: "24h0m0s"
+            jwtKeyFile: ""
+          azureIotHub:
+            deviceConnectionString: ""
+            sasTokenExpiration: "24h0m0s"
+            deviceId: ""
+            hostname: ""
+            tlsCert: ""
+            tlsKey: ""
+    metrics:
+      prometheus:
+        endpointEnabled: false
+        bind: ""
+    metaData:
+      static: |
+        # example:
+        # serial_number="A1B21234"
+      dynamic:
+        executionInterval: "1m0s"
+        maxExecutionDuration: "1s"
+        splitDelimiter: "="
+        commands: |
+          # Example:
+          # temperature="/opt/gateway-temperature/gateway-temperature.sh"
+    commands: |
+      # Example:
+      # [commands.commands.reboot]
+      # max_execution_duration="1s"
+      # command="/usr/bin/reboot"
   configExtra: |
     # use this to add extra settings to the config
+
 
 postgres:
   image:
