@@ -70,4 +70,7 @@ spec:
       volumes: 
       - name: {{ .Values.chirpstack.volumes.name }}
         configMap:
-          name: {{ .Values.chirpstack.volumes.configMap.name }}
+          name: {{ .Values.chirpstack.volumes.configMap.name | default "chirpstack-configuration" }}
+      - name: init-scripts
+        configMap: 
+          name: {{ .Values.postgres.volumes.initdb.configMap.name }}
