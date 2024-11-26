@@ -13,9 +13,6 @@ _common:
     qos: 2
     cleanSession: false
     clientId: "chirpstack"
-    caCert: "none"
-    tlsCert: "none"
-    tlsKey: "none"
     keepAliveInterval: "30s" # This defines the maximum time that that should pass without communication between the client and server.
 
   postgres: 
@@ -72,6 +69,17 @@ chirpstack:
         gateway:
           private : false  # If enabled, gateways can only be used by devices under the same tenant.
           enabledBackend: "mqtt" # The enabled backend type.
+          mqtt: 
+            server: "tcp://127.0.0.1:1883"
+            username: ""
+            password: ""
+            qos: 0
+            cleanSession: true
+            clientId: ""
+            keepAliveInterval: "30s"
+            caCert: ""
+            tlsCert: ""
+            tlsKey: ""
           installationMargin: 10  # Installation margin (dB) used by the ADR engine.
           # A higher number means that the network-server will keep more margin,
           # resulting in a lower data-rate but decreasing the chance that the
@@ -112,6 +120,7 @@ chirpstack:
             pingSlotDr: 0 # Ping-slot data-rate. # set this to 0 to use the default frequency plan for the configured region (which could be frequency hopping).
             pingSlotFrequency: 0 # Ping-slot frequency (Hz). 
     #- name: "eu433"
+  useCommonMqttSettings: true
   config: 
     logging: 
       level: "idle"   # Options are: trace, debug, info, warn error.
@@ -186,7 +195,16 @@ chirpstack:
         eventTopic: "application/{{application_id}}/device/{{dev_eui}}/event/{{event}}" # Event topic template.
         commandTopic: "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}" # Command topic template. 
         json: true # Use JSON encoding instead of Protobuf (binary).
+        server: "tcp://127.0.0.1:1883/"
+        username: ""
+        password: ""
+        qos: 2
+        cleanSession: true
+        clientId: "chirpstack"
         keepAliveInterval: "30s"
+        caCert: ""
+        tlsCert: ""
+        tlsKey: ""
         client: 
           caCert: ""
           caKey: ""
@@ -324,7 +342,7 @@ gb:
     mountPath: /etc/chirpstack-gateway-bridge
   volumes:
     configMap:
-      name: chirpstack-gateway-bridge-eu868-configuration
+      name: chirpstack-gateway-bridge-configuration
   service:
     port: 1700
     type: ClusterIP
@@ -334,17 +352,25 @@ gb:
       logLevel: 4
       logJson: false
       logToSyslog: false
+      extra: | 
+        # extra settings for general not included in chart
     filters:
       netIds: []
       joinEuis: []
-    backend:
+      extra: | 
+        # extra settings for filters not included in chart
+    backend: 
       type: "semtech_udp"
       semtechUdp:
         udpBind: "0.0.0.0:1700"
         fakeRxTime: false
+        extra: | 
+          # extra settings for backend semtechUdp not included in chart
       concentratord:
         eventUrl: "ipc:///tmp/concentratord_event"
         commandUrl: "ipc:///tmp/concentratord_command"
+        extra: | 
+          # extra settings for backend concetratord not included in chart
       basicStation:
         bind: ":3001"
         tlsCert: ""
@@ -355,6 +381,10 @@ gb:
         timesyncInterval: "0s"
         readTimeout: "1m5s"
         writeTimeout: "1s"
+        extra: | 
+          # extra settings for backend basicstation not included in chart
+      extra: | 
+        # extra settings for backend not included in chart
     integration:
       marshaler: "protobuf"
       mqtt:
@@ -378,6 +408,8 @@ gb:
             caCert: ""
             tlsCert: ""
             tlsKey: ""
+            extra: | 
+              # extra settings for integration mqtt auth generic not included in chart
           gcpCloudIotCore:
             server: "ssl://mqtt.googleapis.com:8883"
             deviceId: ""
@@ -386,6 +418,8 @@ gb:
             registryId: ""
             jwtExpiration: "24h0m0s"
             jwtKeyFile: ""
+            extra: | 
+              # extra settings for integration mqtt auth gcpCloudIotCore not included in chart
           azureIotHub:
             deviceConnectionString: ""
             sasTokenExpiration: "24h0m0s"
@@ -393,10 +427,22 @@ gb:
             hostname: ""
             tlsCert: ""
             tlsKey: ""
+            extra: | 
+              # extra settings for integration mqtt auth azureIotHub not included in chart
+          extra: | 
+            # extra settings for integration mqtt auth not included in chart
+        extra: | 
+            # extra settings for integration mqtt not included in chart
+      extra: | 
+            # extra settings for integration not included in chart
     metrics:
       prometheus:
         endpointEnabled: false
         bind: ""
+        extra: | 
+          # extra settings for metrics prometheus not included in chart
+      extra: | 
+        # extra settings for metrics not included in chart
     metaData:
       static: |
         # example:
@@ -408,13 +454,17 @@ gb:
         commands: |
           # Example:
           # temperature="/opt/gateway-temperature/gateway-temperature.sh"
+        extra: | 
+          # extra settings for metaData dynamic not included in chart
+      extra: | 
+        # extra settings for metaData not included in chart
     commands: |
       # Example:
       # [commands.commands.reboot]
       # max_execution_duration="1s"
       # command="/usr/bin/reboot"
-  configExtra: |
-    # use this to add extra settings to the config
+    extra: | 
+      # extra settings for config not included in chart
 
 
 postgres:

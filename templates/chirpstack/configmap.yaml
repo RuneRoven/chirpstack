@@ -27,11 +27,10 @@ data:
       #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
       #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
       {{- if .Values._common.postgres.external.enabled }}
-      dsn="postgres://{{ $.Values._common.postgres.settings.role }}:{{ $.Values._common.postgres.settings.password }}@{{ $.Values._common.postgres.external.host }}/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
+      dsn="postgres://${DB_ROLE}:${DB_PASSWORD}@{{ $.Values._common.postgres.external.host }}/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
       {{- else }}
-      dsn="postgres://{{ $.Values._common.postgres.settings.role }}:{{ $.Values._common.postgres.settings.password }}@postgres.{{ .Values._common.namespace }}.svc.cluster.local/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
+      dsn="postgres://${DB_ROLE}:${DB_PASSWORD}@postgres.{{ .Values._common.namespace }}.svc.cluster.local/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
       {{- end }}
-      
       # Max open connections.
       #
       # This sets the max. number of open connections that are allowed in the
@@ -48,7 +47,7 @@ data:
       # Set this to the path of the CA certificate in case you are using TLS and
       # the server-certificate is not signed by a CA in the platform certificate
       # store.
-      ca_cert={{ .Values._common.postgres.settings.caCert | default "" }}
+      ca_cert="${CA_CERT}"
 
       {{- (and .Values.chirpstack.config.postgresql .Values.chirpstack.config.postgresql.extra | default "") | nindent 6 }}
 
@@ -339,17 +338,29 @@ data:
         command_topic="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.commandTopic | default "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}"  }}"
         
         json={{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.json | default true }}
-        server="tcp://{{ .Values._common.mqtt.host }}:{{ .Values._common.mqtt.port }}/"
-        username = "{{ $.Values._common.mqtt.username | default "" }}"
-        password = "{{ $.Values._common.mqtt.password | default "" }}"
+        {{- if .Values.chirpstack.useCommonMqttSettings }}
+        server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+        username = "${MQTT_USERNAME}"
+        password = "${MQTT_PASSWORD}"
         qos = {{ $.Values._common.mqtt.qos | default 0 }}
         clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
         client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+        keep_alive_interval="{{ and .Values._common.mqtt .Values._common.mqtt.keepAliveInterval | default "30s" }}"  
+        ca_cert = "${MQTT_CA_CERT}"
+        tls_cert = "${MQTT_TLS_CERT}"
+        tls_key = "${MQTT_TLS_KEY}"
+        {{- else }}
+        server="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "tcp://127.0.0.1:1883/" }}" 
+        username = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.username | default "" }}" 
+        password = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.password | default "" }}"
+        qos = {{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.qos | default 2 }}
+        clean_session = {{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.cleanSession | default true }}
+        client_id = #{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "chirpstack" }}" 
         keep_alive_interval="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.keepAliveInterval | default "30s" }}"  
-        ca_cert = "{{ $.Values._common.mqtt.caCert | default "" }}"
-        tls_cert = "{{ $.Values._common.mqtt.tlsCert | default "" }}"
-        tls_key = "{{ $.Values._common.mqtt.tlsKey | default "" }}"
-        
+        ca_cert = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.caCert | default "" }}"  
+        tls_cert = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsCert | default "" }}"  
+        tls_key = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsKey | default "" }}"  
+        {{- end }}
         {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.extra | default "") | nindent 8 }}
 
         # Configuration for MQTT clients.
@@ -917,74 +928,31 @@ data:
           # MQTT configuration.
           [regions.gateway.backend.mqtt]
 
-            # Topic prefix.
-            #
-            # The topic prefix can be used to define the region of the gateway.
-            # Note, there is no need to add a trailing '/' to the prefix. The trailing
-            # '/' is automatically added to the prefix if it is configured.
-            topic_prefix = "{{ $region.name }}"
+            topic_prefix = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.topicPrefix | default $region.name }}"
 
-            # Shared subscription name.
-            #
-            # In case there are multiple ChirpStack instances sharing the same
-            # subscription name, then the MQTT broker will deliver a gateway event
-            # only to one subscriber. In case you have a production and
-            # test-environment connected to the same MQTT broker, make sure that
-            # each environment has its own subscription name, for example:
-            # chirpstack_prod and chirpstack_tst.
-            share_name = "{{ $.Values._common.mqtt.clientId }}"
-
-            # MQTT server (e.g. scheme://host:port where scheme is tcp, ssl or ws)
-            server="tcp://{{ $.Values._common.mqtt.host }}:{{ $.Values._common.mqtt.port }}"
-
-            # Connect with the given username (optional)
-            username="{{ $.Values._common.mqtt.username | default "" }}"
-
-            # Connect with the given password (optional)
-            password="{{ $.Values._common.mqtt.password | default "" }}"
-
-            # Quality of service level
-            #
-            # 0: at most once
-            # 1: at least once
-            # 2: exactly once
-            #
-            # Note: an increase of this value will decrease the performance.
-            # For more information: https://www.hivemq.com/blog/mqtt-essentials-part-6-mqtt-quality-of-service-levels
-            qos={{ $.Values._common.mqtt.qos | default 2 }}
-
-            # Clean session
-            #
-            # Set the "clean session" flag in the connect message when this client
-            # connects to an MQTT broker. By setting this flag you are indicating
-            # that no messages saved by the broker for this client should be delivered.
-            clean_session={{ $.Values._common.mqtt.cleanSession | default false }}
-
-            # Client ID
-            #
-            # Set the client id to be used by this client when connecting to the MQTT
-            # broker. A client id must be no longer than 23 characters. If left blank,
-            # a random id will be generated by ChirpStack.
-            client_id="{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
-
-            # Keep alive interval.
-            #
-            # This defines the maximum time that that should pass without communication
-            # between the client and server.
-            keep_alive_interval = "{{ $.Values._common.mqtt.keepAliveInterval | default "30s" }}"
-
-            # CA certificate file (optional)
-            #
-            # Use this when setting up a secure connection (when server uses ssl://...)
-            # but the certificate used by the server is not trusted by any CA certificate
-            # on the server (e.g. when self generated).
-            ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
-
-            # TLS certificate file (optional)
-            tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
-
-            # TLS key file (optional)
-            tls_key="{{ $.Values._common.mqtt.tlsKey | default "" }}"
+            {{- if .Values.chirpstack.useCommonMqttSettings }}
+            server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+            username = "${MQTT_USERNAME}"
+            password = "${MQTT_PASSWORD}"
+            qos = {{ $.Values._common.mqtt.qos | default 0 }}
+            clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
+            client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+            keep_alive_interval="{{ and .Values._common.mqtt .Values._common.mqtt.keepAliveInterval | default "30s" }}"  
+            ca_cert = "${MQTT_CA_CERT}"
+            tls_cert = "${MQTT_TLS_CERT}"
+            tls_key = "${MQTT_TLS_KEY}"
+            {{- else }}
+            server="{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.server | default "tcp://127.0.0.1:1883/" }}" 
+            username = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.username | default "" }}" 
+            password = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.password | default "" }}"
+            qos = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt..qos | default 2 }}
+            clean_session = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.cleanSession | default true }}
+            client_id = #{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.server | default "chirpstack" }}" 
+            keep_alive_interval="{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.keepAliveInterval | default "30s" }}"  
+            ca_cert = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.caCert | default "" }}"  
+            tls_cert = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.tlsCert | default "" }}"  
+            tls_key = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.tlsKey | default "" }}"  
+            {{- end }}
 
 
         # Gateway channel configuration.

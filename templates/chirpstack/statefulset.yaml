@@ -19,13 +19,26 @@ spec:
       - name: init-chirpstack-db
         image: postgres:latest
         env:
-        - name: PGPASSWORD
-          value: "{{ .Values._common.postgres.settings.password }}"
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: postgresUser
+          - name: DB_ROLE
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: role
         command: ["/bin/bash", "-c"]
         args:
         - |
           # Wait for PostgreSQL to be available
-          until psql -h {{ .Values._common.postgres.external.host }} -U {{ .Values._common.postgres.settings.postgresUser }} -d postgres -c "SELECT 1"; do
+          until psql -h "{{ .Values._common.postgres.external.host }}":"{{ .Values._common.postgres.external.port }}" -U "${POSTGRES_USER}" -d "{{ .Values._common.postgres.settings.dbName }}" -c "SELECT 1"; do
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
@@ -61,6 +74,51 @@ spec:
           {{- else }}
             value: "postgres.{{ .Values._common.namespace }}.svc.cluster.local:{{ .Values.postgres.service.port }}"
           {{- end }}
+          - name: MQTT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: username
+          - name: MQTT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: password
+          - name: MQTT_CA_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: caCert
+          - name: MQTT_TLS_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsCert
+          - name: MQTT_TLS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsKey
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: postgresUser
+          - name: DB_ROLE
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: role
+          - name: CA_CERT
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: caCert
         ports:
         - containerPort: {{ .Values.chirpstack.service.port }}
           name: web

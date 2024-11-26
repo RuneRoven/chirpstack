@@ -8,24 +8,33 @@ data:
     #!/bin/bash
     set -e
 
+    # Use environment variables for secret data
+    DB_ROLE="${DB_ROLE}"
+    POSTGRES_PASSWORD="${DB_PASSWORD}"
+    POSTGRES_USER="${POSTGRES_USER}"
+
     # Check and create role if it does not exist
-    if ! psql -t -c "SELECT 1 FROM pg_roles WHERE rolname='{{ .Values._common.postgres.settings.role }}'" | grep -q 1; then
-        echo "Creating role {{ .Values._common.postgres.settings.role }}"
-        psql -v ON_ERROR_STOP=1 --username "{{ .Values._common.postgres.settings.postgresUser }}" <<-EOSQL
-            create role {{ .Values._common.postgres.settings.role }} with login password '{{ .Values._common.postgres.settings.password }}';
+    if ! psql -t -c "SELECT 1 FROM pg_roles WHERE rolname='${DB_ROLE}'" | grep -q 1; then
+        echo "Creating role ${DB_ROLE}"
+        psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" <<-EOSQL
+            create role ${DB_ROLE} with login password '${POSTGRES_PASSWORD}';
         EOSQL
     else
-        echo "Role {{ .Values._common.postgres.settings.role }} already exists."
+        echo "Role ${DB_ROLE} already exists."
     fi
   initdb/002-chirpstack_extensions.sh: |
     #!/bin/bash
     set -e
 
+    # Use environment variables for secret data
+    POSTGRES_USER="${POSTGRES_USER}"
+    DB_NAME="{{ .Values._common.postgres.settings.dbName }}"
+
     # Check and create extensions if they do not exist
     for ext in pg_trgm hstore; do
         if ! psql -t -c "SELECT 1 FROM pg_extension WHERE extname='${ext}'" | grep -q 1; then
             echo "Creating extension ${ext}"
-            psql -v ON_ERROR_STOP=1 --username "{{ .Values._common.postgres.settings.postgresUser }}" --dbname="{{ .Values._common.postgres.settings.dbName }}" <<-EOSQL
+            psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --dbname="${DB_NAME}" <<-EOSQL
                 create extension ${ext};
             EOSQL
         else

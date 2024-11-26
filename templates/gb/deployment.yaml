@@ -19,6 +19,32 @@ spec:
       - name: chirpstack-gb
         image: "{{ .Values.gb.image.repository }}:{{ .Values.gb.image.tag | default "chirpstack/chirpstack-gateway-bridge:4" }}"
         imagePullPolicy: {{ .Values.gb.image.pullPolicy }}
+        env:
+          - name: MQTT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: username
+          - name: MQTT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: password
+          - name: MQTT_CA_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: caCert
+          - name: MQTT_TLS_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsCert
+          - name: MQTT_TLS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsKey
         ports:
         - containerPort: {{ .Values.gb.service.port }}
         volumeMounts:

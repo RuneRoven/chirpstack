@@ -20,7 +20,20 @@ spec:
         image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag | default "postgres:14-alpine" }}"
         env:
           - name: POSTGRES_PASSWORD
-            value: {{ .Values._common.postgres.settings.password }}
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: postgresUser
+          - name: DB_ROLE
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: role
         imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.postgres.service.port }}
