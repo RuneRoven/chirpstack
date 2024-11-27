@@ -9,6 +9,6 @@ entries:
     name: chirpstack
     type: application
     urls:
-    - https://github.com/RuneRoven/chirpstack/chirpstack-0.1.0.tgz
+    - https://github.io/RuneRoven/chirpstack/chirpstack-0.1.0.tgz
     version: 0.1.0
 generated: "2024-11-27T11:11:29.2814936+01:00"
