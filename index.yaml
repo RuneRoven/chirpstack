@@ -3,12 +3,12 @@ entries:
   chirpstack:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2024-11-27T12:19:55.1127813+01:00"
+    created: "2024-11-27T12:26:22.0502417+01:00"
     description: A Helm chart for chirpstack 4
-    digest: 0bf8529abc8a5b61cb06d99da3090042d99ba5da88fda86ad59791abefddada3
+    digest: 10354270b82a643696885ffa9365e1dea7f153423306205a173c6abfa0a709ce
     name: chirpstack
     type: application
     urls:
     - https://github.io/RuneRoven/chirpstack/chirpstack-0.1.0.tgz
     version: 0.1.0
-generated: "2024-11-27T12:19:55.0719397+01:00"
+generated: "2024-11-27T12:26:22.0360837+01:00"
