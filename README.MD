@@ -214,6 +214,7 @@ chirpstack:
         extra: |
           # extra settings for mqtt integration not included in helm chart
       postgresql:
+        useCustom: false # overrides the common settings for postgresql for the integration
         dsn: "postgresql://chirpstack_integration:chirpstack_integration@localhost/chirpstack_integration?sslmode=disable"
         maxOpenConnections: 10
         caCert: ""

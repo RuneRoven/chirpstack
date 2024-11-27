@@ -152,23 +152,23 @@ data:
         {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.generic .Values.gb.config.integration.mqtt.auth.generic.extra | default "" | nindent 8 }}
 
         [integration.mqtt.auth.gcpCloudIotCore]
-        server = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.server | default "ssl://mqtt.googleapis.com:8883" }}"
-        device_id = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.deviceId | default "" }}"
-        project_id = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.projectId | default "" }}"
-        cloud_region = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.cloudRegion | default "" }}"
-        registry_id = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.registryId | default "" }}"
-        jwt_expiration = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.jwtExpiration | default "24h0m0s" }}"
-        jwt_key_file = "{{ and .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.jwtKeyFile | default "" }}"
+        server = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.server | default "ssl://mqtt.googleapis.com:8883" }}"
+        device_id = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.deviceId | default "" }}"
+        project_id = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.projectId | default "" }}"
+        cloud_region = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.cloudRegion | default "" }}"
+        registry_id = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.registryId | default "" }}"
+        jwt_expiration = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.jwtExpiration | default "24h0m0s" }}"
+        jwt_key_file = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.jwtKeyFile | default "" }}"
         {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore .Values.gb.config.integration.mqtt.auth.gcpCloudIotCore.extra | default "" | nindent 8 }}
 
         [integration.mqtt.auth.azureIotHub]
-        device_connection_string = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.deviceConnectionString | default "" }}"
-        sas_token_expiration = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.sasTokenExpiration | default "24h0m0s" }}"
-        device_id = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.deviceId | default "" }}"
-        hostname = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.hostname | default "" }}"
-        tls_cert = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.tlsCert | default "" }}"
-        tls_key = "{{ and .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.tlsKey | default "" }}"
-        {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.extra | default "" | nindent 8 }}
+        device_connection_string = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.deviceConnectionString | default "" }}"
+        sas_token_expiration = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.sasTokenExpiration | default "24h0m0s" }}"
+        device_id = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.deviceId | default "" }}"
+        hostname = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.hostname | default "" }}"
+        tls_cert = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.tlsCert | default "" }}"
+        tls_key = "{{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.tlsKey | default "" }}"
+        {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.azureIotHub .Values.gb.config.integration.mqtt.auth.azureIotHub.extra | default "" | nindent 8 }}
       {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.auth .Values.gb.config.integration.mqtt.auth.extra | default "" | nindent 6 }}
     {{ and .Values.gb.config.integration .Values.gb.config.integration.mqtt .Values.gb.config.integration.mqtt.extra | default "" | nindent 6 }}
     {{ and .Values.gb.config.integration .Values.gb.config.integration.extra | default "" | nindent 4 }}
@@ -191,7 +191,7 @@ data:
       {{ and .Values.gb.config.metaData .Values.gb.config.metaData.dynamic .Values.gb.config.metaData.dynamic.extra | default "" | nindent 6 }}
 
       [meta_data.dynamic.commands]
-      {{ .Values.gb.config.metaData.dynamic.commands | default "" | nindent 8 }}
+      {{ and .Values.gb.config.metaData .Values.gb.config.metaData.dynamic .Values.gb.config.metaData.dynamic.commands | default "" | nindent 8 }}
     {{ and .Values.gb.config.metaData .Values.gb.config.metaData.extra | default "" | nindent 4 }}
     [commands]
     {{ .Values.gb.config.commands | default "" | nindent 6 }}

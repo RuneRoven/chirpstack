@@ -11,7 +11,7 @@ data:
       # Log level.
       #
       # Options are: trace, debug, info, warn error.
-      level={{ .Values.chirpstack.config.logging.level | default "info" }}
+      level={{ and .Values.chirpstack.config.logging .Values.chirpstack.config.logging.level | default "info" }}
       {{- (and .Values.chirpstack.config.logging .Values.chirpstack.config.logging.extra | default "") | nindent 6 }}
 
     # PostgreSQL configuration.
@@ -82,7 +82,7 @@ data:
     [api]
 
       # interface:port to bind the API interface to.
-      bind="{{ .Values.chirpstack.config.api.interface | default "0.0.0.0" }}:{{ .Values.chirpstack.config.api.port | default "8080" }}"
+      bind="{{ and .Values.chirpstack.config.api .Values.chirpstack.config.api.interface | default "0.0.0.0" }}:{{ and .Values.chirpstack.config.api .Values.chirpstack.config.api.port | default "8080" }}"
 
       # Secret.
       #
@@ -90,7 +90,7 @@ data:
       # is never exposed. Changing this secret will invalidate all login and API
       # tokens. The following command can be used to generate a random secret:
       #   openssl rand -base64 32
-      secret="{{ .Values.chirpstack.config.api.secret | default "iLikePink"}}"
+      secret="{{ and .Values.chirpstack.config.api .Values.chirpstack.config.api.secret | default "iLikePink"}}"
       {{- (and .Values.chirpstack.config.api .Values.chirpstack.config.api.extra | default "") | nindent 6 }}
 
     # Global gateway configuration.
@@ -106,18 +106,18 @@ data:
       #
       # The ca_key is expected to be in PKCS#8 format (you can use openssl to
       # convert to PKCS#8).
-      ca_cert="{{ .Values.chirpstack.config.gateway.caCert | default "" }}"
-      ca_key={{ .Values.chirpstack.config.gateway.caKey | default "" }}"
+      ca_cert="{{ and .Values.chirpstack.config.gateway .Values.chirpstack.config.gateway.caCert | default "" }}"
+      ca_key={{ and .Values.chirpstack.config.gateway .Values.chirpstack.config.gateway.caKey | default "" }}"
       # Certificate lifetime.
       #
       # This defines how long (after generating) the certificate remains valid.
-      client_cert_lifetime={{ .Values.chirpstack.config.gateway.clientCertLiftime | default "11months 30days 3h 50m 24s" }}"
+      client_cert_lifetime={{ and .Values.chirpstack.config.gateway .Values.chirpstack.config.gateway.clientCertLiftime | default "11months 30days 3h 50m 24s" }}"
 
       # Allow unknown gateways.
       #
       # If set to true, then uplinks received from gateways not configured in
       # ChirpStack will be allowed.
-      allow_unknown_gateways={{ .Values.chirpstack.config.gateway.allowUnknownGateways | default false }}"
+      allow_unknown_gateways={{ and .Values.chirpstack.config.gateway .Values.chirpstack.config.gateway.allowUnknownGateways | default false }}"
     
       {{- (and .Values.chirpstack.config.gateway .Values.chirpstack.config.gateway.extra | default "") | nindent 6 }}
 
@@ -125,7 +125,7 @@ data:
     [network]
 
       # Network identifier (NetID, 3 bytes) encoded as HEX (e.g. 010203).
-      net_id="{{ .Values.chirpstack.config.network.netId | default "000000" }}"
+      net_id="{{ and .Values.chirpstack.config.network .Values.chirpstack.config.network.netId | default "000000" }}"
 
       # Secondary NetIDs.
       #
@@ -134,10 +134,15 @@ data:
       # roaming device (if roaming is enabled).
       # If you would like to assign DevAddrs from multiple NetIDs, you must specify
       # these in the dev_addr_prefixes configuration.
+      {{- if and .Values.chirpstack.config.network .Values.chirpstack.config.network.secondaryNetIds }}
       secondary_net_ids={{- range $index, $item := .Values.chirpstack.config.network.secondaryNetIds }}
         "{{ $item }}"{{ if lt $index (sub (len $.secondaryNetIds) 1) }},{{ end }}
       {{- end }}
       ]
+      {{- else }}
+      secondary_net_ids=[
+      ]
+      {{- end }}
 
       # DevAddr prefix(es).
       #
@@ -152,11 +157,15 @@ data:
       # This example configures the DevAddr range to 0000ff00 - 0000ffff.
       # The /24 means that the 24MSB of the prefix will be used, meaning that the
       # 8LSB will be used as address space.
+      {{- if and .Values.chirpstack.config.network .Values.chirpstack.config.network.devAddrPrefixes }}
       dev_addr_prefixes={{- range $index, $item := .Values.chirpstack.config.network.devAddrPrefixes }}
         "{{ $item }}"{{ if lt $index (sub (len $.devAddrPrefixes) 1) }},{{ end }}
       {{- end }}
       ]
-
+      {{- else }}
+      dev_addr_prefixes=[
+      ]
+      {{- end }}
       # Enabled regions.
       #
       # Multiple regions can be enabled simultaneously. Each region must match
@@ -173,7 +182,7 @@ data:
       # the same uplink frame. Please note that this value affects the
       # roundtrip time. The total roundtrip time (which includes network latency)
       # must be less than the (first) receive-window.
-      deduplication_delay="{{ .Values.chirpstack.config.network.deduplicationDelay | default "200ms" }}"
+      deduplication_delay="{{ and .Values.chirpstack.config.network .Values.chirpstack.config.network.deduplicationDelay | default "200ms" }}"
 
       # Get downlink data delay.
       #
@@ -187,17 +196,23 @@ data:
       get_downlink_data_delay="100ms"
 
       # Mac-commands disabled.
-      mac_commands_disabled="{{ .Values.chirpstack.config.network.macCommandsDisabled | default false }}"
+      mac_commands_disabled="{{ and .Values.chirpstack.config.network .Values.chirpstack.config.network.macCommandsDisabled | default false }}"
 
       # Custom ADR plugins.
       #
       # The custom ADR plugin must be implemented in JavaScript. For an example
       # skeleton, please see:
       # https://github.com/chirpstack/chirpstack/blob/master/examples/adr_plugins/plugin_skeleton.js
-      adr_plugins={{- range $index, $item := .Values.chirpstack.config.network.adrPlugins }}
+      {{- if and .Values.chirpstack.config.network .Values.chirpstack.config.network.adrPlugins }}
+      adr_plugins=[
+      {{- range $index, $item := .Values.chirpstack.config.network.adrPlugins }}
         "{{ $item }}"{{ if lt $index (sub (len $.adrPlugins) 1) }},{{ end }}
       {{- end }}
       ]
+      {{- else }}
+      adr_plugins=[
+      ]
+      {{- end }}
 
       {{- (and .Values.chirpstack.config.network .Values.chirpstack.config.network.extra | default "") | nindent 6 }}
 
@@ -207,14 +222,14 @@ data:
         #
         # The interval in which the downlink scheduler for multicast, Class-B and
         # Class-C runs.
-        interval="{{ and .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.interval | default "1s" }}"
+        interval="{{ and .Values.chirpstack.config.network  .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.interval | default "1s" }}"
 
         # Class-A lock duration.
         #
         # This defines the lock duration between receiving a Class-A uplink and
         # the next scheduler-run for a device. The purpose of this lock is to
         # avoid collisions between Class-A and Class-B/C downlinks.
-        class_a_lock_duration="{{ and .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.classALockDuration | default "5s" }}"
+        class_a_lock_duration="{{ and .Values.chirpstack.config.network  .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.classALockDuration | default "5s" }}"
 
         # Class-C lock duration.
         #
@@ -222,21 +237,21 @@ data:
         # payloads for the same device. The purpose of this lock is to avoid
         # overlap between scheduling Class-C downlinks and / or spreading the 
         # downlink capacity load on the gateway.
-        class_c_lock_duration="{{ and .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.classCLockDuration | default "5s" }}"
+        class_c_lock_duration="{{ and .Values.chirpstack.config.network  .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.classCLockDuration | default "5s" }}"
 
         # Multicast Class-C margin.
         #
         # This defines the minimum margin between scheduling multiple multicast downlinks
         # (within the same multicast-group). This value must be equal or greater than the
         # scheduler interval.
-        multicast_class_c_margin="{{ and .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.multicastClassCMargin | default "5s" }}"
+        multicast_class_c_margin="{{ and .Values.chirpstack.config.network  .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.multicastClassCMargin | default "5s" }}"
 
         # Multicast Class-B margin.
         #
         # This defines the minimum margin between scheduling multiple multicast downlinks
         # (within the same multicast-group). This value must be equal or greater than the
         # scheduler interval.
-        multicast_class_b_margin="{{ and .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.multicastClassBMargin | default "5s" }}"
+        multicast_class_b_margin="{{ and .Values.chirpstack.config.network  .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.multicastClassBMargin | default "5s" }}"
         
         {{- (and .Values.chirpstack.config.network .Values.chirpstack.config.network.scheduler .Values.chirpstack.config.network.scheduler.extra | default "") | nindent 8 }}
 
@@ -248,82 +263,82 @@ data:
       # /metrics - Returns metrics which can be scraped by Prometheus.
       #
       # If not set, this endpoint will be disabled.
-      bind="{{ .Values.chirpstack.config.monitoring.bind | default "" }}"
+      bind="{{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.bind | default "" }}"
 
       # Backend Interfaces log max history.
       #
       # This defines the max number of Backend Interface request records that will be persisted
       # in Redis Streams. Setting this value to 0 disables this features.
-      backend_interfaces_log_max_history={{ .Values.chirpstack.config.monitoring.backendInterfacesLogMaxHistory | default 10 }}
+      backend_interfaces_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.backendInterfacesLogMaxHistory | default 10 }}
 
       # Meta-log max history.
       #
       # This defines the max number of meta records that will be persisted in Redis Streams.
       # Setting this value to 0 disables this feature.
-      meta_log_max_history={{ .Values.chirpstack.config.monitoring.metaLogMaxHistory | default 10 }}
+      meta_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.metaLogMaxHistory | default 10 }}
 
       # Gateway frame-log max history.
       #
       # This defines the max number of frame-log records that will be persisted in Redis Streams.
       # This stream contains the uplink and downlink frames of all gateways.
       # Setting this value to 0 disables this feature.
-      gateway_frame_log_max_history={{ .Values.chirpstack.config.monitoring.gatewayFrameLogMaxHistory | default 10 }}
+      gateway_frame_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.gatewayFrameLogMaxHistory | default 10 }}
 
       # Device frame-log max history.
       #
       # This defines the max number of frame-log records that will be persisted in Redis Streams.
       # This stream contains the uplink and downlink frames of all devices.
       # Setting this value to 0 disables this feature.
-      device_frame_log_max_history={{ .Values.chirpstack.config.monitoring.deviceFrameLogMaxHistory | default 10 }}
+      device_frame_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.deviceFrameLogMaxHistory | default 10 }}
 
       # Device event-log max history.
       #
       # This defines the max number of event-log records that will be persisted in Redis Streams.
       # This stream contains the events of all devices.
       # Setting this value to 0 disables this feature.
-      device_event_log_max_history={{ .Values.chirpstack.config.monitoring.deviceEventLogMaxHistory | default 10 }}
+      device_event_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.deviceEventLogMaxHistory | default 10 }}
 
       # Per gateway frame-log max history.
       #
       # Equal to the gateway_frame_log_max_history, but for each gateway a new Redis Stream
       # is created.
       # Setting this value to 0 disables this feature.
-      per_gateway_frame_log_max_history={{ .Values.chirpstack.config.monitoring.perGatewayFrameLogMaxHistory | default 10 }}
+      per_gateway_frame_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perGatewayFrameLogMaxHistory | default 10 }}
 
       # Per gateway frame-log TTL.
       #
       # This defines the TTL of the Redis Stream key.
-      per_gateway_frame_log_ttl="{{ .Values.chirpstack.config.monitoring.perGatewayFrameLogTtl | default "1month 13h 26m 24s" }}"
+      per_gateway_frame_log_ttl="{{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perGatewayFrameLogTtl | default "1month 13h 26m 24s" }}"
 
       # Per device frame-log max history.
       #
       # Equal to the device_frame_log_max_history, but for each device a new Redis Stream
       # is created.
       # Setting this value to 0 disables this feature.
-      per_device_frame_log_max_history={{ .Values.chirpstack.config.monitoring.perDeviceFrameLogMaxHistory | default 10 }}
+      per_device_frame_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perDeviceFrameLogMaxHistory | default 10 }}
 
       # Per device frame-log TTL.
       #
       # This defines the TTL of the Redis Stream key.
-      per_device_frame_log_ttl="{{ .Values.chirpstack.config.monitoring.perDeviceFrameLogTtl | default "1month 13h 26m 24s" }}"
+      per_device_frame_log_ttl="{{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perDeviceFrameLogTtl | default "1month 13h 26m 24s" }}"
 
       # Per device event-log max history.
       #
       # Equal to the device_event_log_max_history, but for each device a new Redis Stream
       # is created.
       # Setting this value to 0 disables this feature.
-      per_device_event_log_max_history={{ .Values.chirpstack.config.monitoring.perDeviceEventLogMaxHistory | default 10 }}
+      per_device_event_log_max_history={{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perDeviceEventLogMaxHistory | default 10 }}
 
       # Per device event-log TTL.
       #
       # This defines the TTL of the Redis Stream key.
-      per_device_event_log_ttl="{{ .Values.chirpstack.config.monitoring.perDeviceEventLogTtl | default "1month 13h 26m 24s" }}"
+      per_device_event_log_ttl="{{ and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.perDeviceEventLogTtl | default "1month 13h 26m 24s" }}"
 
       {{- (and .Values.chirpstack.config.monitoring .Values.chirpstack.config.monitoring.extra | default "") | nindent 6 }}
 
     [integration]
       enabled=[
-      {{- range $index, $item := .Values.chirpstack.config.integration.enabled }}
+      {{- range $index, $item := and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.enabled }}
         "{{ $item }}"{{ if lt $index (sub (len $.Values.chirpstack.config.integration.enabled) 1) }},{{ end }}
       {{- end }}
       ]
@@ -331,13 +346,13 @@ data:
       {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.extra | default "") | nindent 6 }}
       [integration.mqtt]
         # Event topic template.
-        event_topic="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.eventTopic | default "application/{{application_id}}/device/{{dev_eui}}/event/{{event}}" }}"
+        event_topic="{{ and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.eventTopic | default "application/{{application_id}}/device/{{dev_eui}}/event/{{event}}" }}"
 
         # Command topic template.
         # This is the topic on which the MQTT subscribes for receiving (enqueue) commands.
-        command_topic="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.commandTopic | default "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}"  }}"
+        command_topic="{{ and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.commandTopic | default "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}"  }}"
         
-        json={{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.json | default true }}
+        json={{ and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.json | default true }}
         {{- if .Values.chirpstack.useCommonMqttSettings }}
         server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
         username = "${MQTT_USERNAME}"
@@ -350,18 +365,18 @@ data:
         tls_cert = "${MQTT_TLS_CERT}"
         tls_key = "${MQTT_TLS_KEY}"
         {{- else }}
-        server="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "tcp://127.0.0.1:1883/" }}" 
-        username = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.username | default "" }}" 
-        password = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.password | default "" }}"
-        qos = {{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.qos | default 2 }}
-        clean_session = {{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.cleanSession | default true }}
-        client_id = #{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "chirpstack" }}" 
-        keep_alive_interval="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.keepAliveInterval | default "30s" }}"  
-        ca_cert = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.caCert | default "" }}"  
-        tls_cert = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsCert | default "" }}"  
-        tls_key = "{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsKey | default "" }}"  
+        server="{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "tcp://127.0.0.1:1883/" }}" 
+        username = "{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.username | default "" }}" 
+        password = "{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.password | default "" }}"
+        qos = {{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.qos | default 2 }}
+        clean_session = {{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.cleanSession | default true }}
+        client_id = #{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.server | default "chirpstack" }}" 
+        keep_alive_interval="{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.keepAliveInterval | default "30s" }}"  
+        ca_cert = "{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.caCert | default "" }}"  
+        tls_cert = "{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsCert | default "" }}"  
+        tls_key = "{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.tlsKey | default "" }}"  
         {{- end }}
-        {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.extra | default "") | nindent 8 }}
+        {{- (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.extra | default "") | nindent 8 }}
 
         # Configuration for MQTT clients.
         [integration.mqtt.client]
@@ -375,16 +390,17 @@ data:
           #
           # The ca_key is expected to be in PKCS#8 format (you can use openssl to
           # convert to PKCS#8).
-          ca_cert="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.caCert | default "" }}"  
-          ca_key="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.caKey | default "" }}"  
+          ca_cert="{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.caCert | default "" }}"  
+          ca_key="{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.caKey | default "" }}"  
 
           # Certificate lifetime.
           #
           # This defines how long (after generating) the certificate remains valid.
-          client_cert_lifetime="{{ and .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.clienctCertLifefime | default "11months 30days 3h 50m 24s" }}"  
+          client_cert_lifetime="{{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.mqtt .Values.chirpstack.config.integration.mqtt.client .Values.chirpstack.config.integration.mqtt.client.clienctCertLifefime | default "11months 30days 3h 50m 24s" }}"  
       
       # PostgreSQL integration configuration.
       [integration.postgresql]
+         
         # PostgreSQL DSN.
         #
         # Format example: postgres://<USERNAME>:<PASSWORD>@<HOSTNAME>/<DATABASE>?sslmode=<SSLMODE>.
@@ -394,21 +410,32 @@ data:
         #  * require - Always SSL (skip verification)
         #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
         #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
-        dsn=client_cert_lifetime="{{ and .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.dsn | default "postgresql://chirpstack_integration:chirpstack_integration@localhost/chirpstack_integration?sslmode=disable" }}"  
-
+        {{- if and .Values._common.postgres.external.enabled .Values.chirpstack.config.integration .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.useCustom  }}
+        dsn="{{ and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.dsn | default "postgresql://chirpstack_integration:chirpstack_integration@localhost/chirpstack_integration?sslmode=disable" }}"  
+        {{- else if .Values._common.postgres.external.enabled }}
+        dsn="postgres://${DB_ROLE}:${DB_PASSWORD}@{{ $.Values._common.postgres.external.host }}/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
+        {{- else }}
+        dsn="postgres://${DB_ROLE}:${DB_PASSWORD}@postgres.{{ .Values._common.namespace }}.svc.cluster.local/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
+        {{- end }}
         # Max open connections.
         #
         # This sets the max. number of open connections that are allowed in the
         # PostgreSQL connection pool.
-        max_open_connections={{ and .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.maxOpenConnections | default 10 }}"  
-
+        {{- if and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.useCustom  }}
+        max_open_connections={{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.maxOpenConnections | default 10 }}"  
+        {{- else }}
+        max_open_connections={{ .Values._common.postgres.settings.maxOpenConnections | default 10 }}
+        {{- end }}
         # CA certificate (optional).
         #
         # Set this to the path of the CA certificate in case you are using TLS and
         # the server-certificate is not signed by a CA in the platform certificate
         # store.
-        ca_cert={{ and .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.caCert | default "" }}"  
-
+        {{- if and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.useCustom  }}
+        ca_cert={{ and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.caCert | default "" }}"  
+        {{- else }}
+        ca_cert="${CA_CERT}"
+        {{- end }}
         {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.postgresql .Values.chirpstack.config.integration.postgresql.extra | default "") | nindent 8 }}
 
       [integration.amqp]
@@ -417,16 +444,16 @@ data:
         #
         # See for a specification of all the possible options:
         # https://www.rabbitmq.com/uri-spec.html
-        url="{{ (and .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.url) | default "amqp://guest:guest@localhost:5672" }}"
+        url="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.url) | default "amqp://guest:guest@localhost:5672" }}"
 
         # Event routing key.
         #
         # This is the event routing-key template used when publishing device
         # events. Messages will be published to the "amq.topic" exchange.
-        event_routing_key="{{ (and .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.eventRoutingKey) | default "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}" }}"
+        event_routing_key="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.eventRoutingKey) | default "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}" }}"
 
         # Use JSON encoding instead of Protobuf (binary).
-        json={{ (and .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.json) | default true }}
+        json={{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.json) | default true }}
 
         {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.amqp .Values.chirpstack.config.integration.amqp.extra | default "") | nindent 8 }}
 
@@ -434,19 +461,24 @@ data:
       [integration.kafka]
 
         # Brokers.
+        {{- if and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.brokers }}
         brokers=[
-        {{- range $index, $broker := (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.brokers) | default (list "localhost:9092") }}
+        {{- range $index, $broker := (.Values.chirpstack.config.integration.kafka.brokers)  }}
           "{{ $broker }}"{{ if lt (add $index 1) (len $.Values.chirpstack.config.integration.kafka.brokers) }},{{ end }}
         {{- end }}
         ]
-
+        {{- else }}
+        brokers[
+          "localhost:9092"
+        ]
+        {{- end }}
         # TLS.
         #
         # Set this to true when the Kafka client must connect using TLS to the Broker.
-        tls={{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.tls) | default false }}
+        tls={{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.tls) | default false }}
 
         # Topic for events.
-        topic="{{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.topic) | default "chirpstack" }}"
+        topic="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.topic) | default "chirpstack" }}"
 
         # Template for keys included in Kafka messages.
         # Kafka uses the key for distributing messages over partitions. You can use
@@ -454,13 +486,13 @@ data:
         # they can be consumed in-order. And Kafka can use the key for data retention
         # decisions.  A header "event" with the event type is included in each
         # message. There is no need to parse it from the key.
-        event_key="{{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.eventKey) | default "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}" }}"
+        event_key="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.eventKey) | default "application.{{application_id}}.device.{{dev_eui}}.event.{{event}}" }}"
 
         # Username (optional).
-        username="{{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.username) | default "" }}"
+        username="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.username) | default "" }}"
 
         # Password.
-        password="{{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.password) | default "" }}"
+        password="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.password) | default "" }}"
 
         # Mechanism.
         #
@@ -468,12 +500,12 @@ data:
         # * PLAIN
         # * SCRAM-SHA-256
         # * SCRAM-SHA-512
-        mechanism="{{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.mechanism) | default "PLAIN" }}"
+        mechanism="{{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.mechanism) | default "PLAIN" }}"
 
         # Use JSON encoding instead of Protobuf (binary).
-        json={{ (and .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.json) | default true }}
+        json={{ (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.json) | default true }}
 
-        {{- (and .Values.chirpstack.config.integration .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.extra | default "") | nindent 8 }}
+        {{- (and .Values.chirpstack.config.integration  .Values.chirpstack.config.integration .Values.chirpstack.config.integration.kafka .Values.chirpstack.config.integration.kafka.extra | default "") | nindent 8 }}
 
     # Codec configuration.
     [codec]
@@ -511,7 +543,7 @@ data:
         # The user will not be associated with any organization, but in order to
         # facilitate the automatic onboarding of users, it is possible to configure a
         # registration callback URL (next config option).
-        registration_enabled={{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.registrationEnabled) | default false }}
+        registration_enabled={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.registrationEnabled) | default false }}
 
         # Registration callback URL.
         #
@@ -523,41 +555,41 @@ data:
         # - user_id, of the newly created user in ChirpStack.
         #
         # The POST body contains a JSON payload with the OpenID Connect UserInfo payload.
-        registration_callback_url="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.registrationCallbackUrl) | default "" }}"
+        registration_callback_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.registrationCallbackUrl) | default "" }}"
 
         # Provider URL.
         # This is the URL of the OpenID Connect provider.
         # Example: https://auth.example.org
-        provider_url="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.providerUrl) | default "" }}"
+        provider_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.providerUrl) | default "" }}"
 
         # Client ID.
-        client_id="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.clientId) | default "" }}"
+        client_id="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.clientId) | default "" }}"
 
         # Client secret.
-        client_secret="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.clientSecret) | default "" }}"
+        client_secret="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.clientSecret) | default "" }}"
 
         # Redirect URL.
         #
         # This must contain the ChirpStack web-interface hostname
         # with '/auth/oidc/callback' path, e.g. https://example.com/auth/oidc/callback.
-        redirect_url="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.redirectUrl) | default "" }}"
+        redirect_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.redirectUrl) | default "" }}"
 
         # Logout URL.
         #
         # When set, ChirpStack will redirect to this URL instead
         # of redirecting to the login page.
-        logout_url="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.logoutUrl) | default "" }}"
+        logout_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.logoutUrl) | default "" }}"
 
         # Login redirect.
         #
         # If set to true, then ChirpStack will immediately redirect to the OAuth2
         # provider for login.
-        login_redirect={{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.loginRedirect) | default false }}
+        login_redirect={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.loginRedirect) | default false }}
 
         # Login label.
         #
         # The login label is used in the web-interface login form.
-        login_label="{{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.loginLabel) | default "" }}"
+        login_label="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.loginLabel) | default "" }}"
 
         # Assume e-mail verified.
         #
@@ -565,18 +597,23 @@ data:
         # from the OpenID Connect provider, assuming it will be true. Some
         # providers do not provide this field, in which case setting this value
         # is needed.
-        assume_email_verified={{ (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.assumeEmailVerified) | default false }}
+        assume_email_verified={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.assumeEmailVerified) | default false }}
 
         # Scopes.
         #
         # This configures the scopes that are used during login. You must at least define
         # "email" and "profile".
+        {{- if and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.scopes }}
         scopes=[
-        {{- range $index, $scope := (and .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.scopes) | default (list "email" "profile") }}
+        {{- range $index, $scope := (.Values.chirpstack.config.userAuthentication.openidConnect.scopes) }}
           "{{ $scope }}"{{ if lt (add $index 1) (len $.Values.chirpstack.config.userAuthentication.openidConnect.scopes) }},{{ end }}
         {{- end }}
         ]
-
+        {{- else }}
+        scopes=[
+          "email", "profile"
+        ]
+        {{- end }}
         {{- (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.openidConnect .Values.chirpstack.config.userAuthentication.openidConnect.extra | default "") | nindent 8 }}
 
       # OAuth2 backend.
@@ -586,7 +623,7 @@ data:
         #
         # Options are:
         #  * clerk
-        provider="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.provider) | default "" }}"
+        provider="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.provider) | default "" }}"
 
         # Registration enabled.
         #
@@ -596,7 +633,7 @@ data:
         # The user will not be associated with any organization, but in order to
         # facilitate the automatic onboarding of users, it is possible to configure a
         # registration callback URL (next config option).
-        registration_enabled={{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.registrationEnabled) | default false }}
+        registration_enabled={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.registrationEnabled) | default false }}
 
         # Registration callback URL.
         #
@@ -608,63 +645,69 @@ data:
         # - user_id, of the newly created user in ChirpStack.
         #
         # The POST body contains a JSON payload with the OAuth2 payload.
-        registration_callback_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.registrationCallbackUrl) | default "" }}"
+        registration_callback_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.registrationCallbackUrl) | default "" }}"
 
         # OAuth2 client ID.
-        client_id="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.clientId) | default "" }}"
+        client_id="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.clientId) | default "" }}"
 
         # OAuth2 client secret.
-        client_secret="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.clientSecret) | default "" }}"
+        client_secret="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.clientSecret) | default "" }}"
 
         # OAuth2 auth URL.
-        auth_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.authUrl) | default "" }}"
+        auth_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.authUrl) | default "" }}"
 
         # OAuth2 token URL.
-        token_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.tokenUrl) | default "" }}"
+        token_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.tokenUrl) | default "" }}"
 
         # Userinfo URL.
         #
         # This is the URL that ChirpStack will request to receive the user information.
-        userinfo_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.userinfoUrl) | default "" }}"
+        userinfo_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.userinfoUrl) | default "" }}"
 
         # Redirect URL.
         #
         # This must contain the ChirpStack web-interface hostname
         # with '/auth/oauth2/callback' path, e.g. https://example.com/auth/oauth2/callback.
-        redirect_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.redirectUrl) | default "" }}"
+        redirect_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.redirectUrl) | default "" }}"
 
         # Logout URL.
         #
         # When set, ChirpStack will redirect to this URL instead
         # of redirecting to the login page.
-        logout_url="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.logoutUrl) | default "" }}"
+        logout_url="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.logoutUrl) | default "" }}"
 
         # Login redirect.
         #
         # If set to true, then ChirpStack will immediately redirect to the OAuth2
         # provider for login.
-        login_redirect={{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.loginRedirect) | default false }}
+        login_redirect={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.loginRedirect) | default false }}
 
         # Login label.
         #
         # The login label is used in the web-interface login form.
-        login_label="{{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.loginLabel) | default "" }}"
+        login_label="{{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.loginLabel) | default "" }}"
 
         # Assume e-mail verified.
         #
         # If set to true, then ChirpStack will ignore the email_verified received
         # from the userinfo URL, assuming it will be true.
-        assume_email_verified={{ (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.assumeEmailVerified) | default false }}
+        assume_email_verified={{ (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.assumeEmailVerified) | default false }}
 
         # Scopes.
         #
         # This configures the scopes that are used during login. You must at least define
         # "email".
+        {{ if and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.scopes }}
         scopes=[
-        {{- range $index, $scope := (and .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.scopes) | default (list "email") }}
+        {{- range $index, $scope := ( .Values.chirpstack.config.userAuthentication.oauth2.scopes)  }}
           "{{ $scope }}"{{ if lt (add $index 1) (len $.Values.chirpstack.config.userAuthentication.oauth2.scopes) }},{{ end }}
         {{- end }}
         ]
+        {{- else }}
+        scopes=[
+          "email"
+        ]
+        {{- end }}
 
         {{- (and .Values.chirpstack.config.userAuthentication .Values.chirpstack.config.userAuthentication.oauth2 .Values.chirpstack.config.userAuthentication.oauth2.extra | default "") | nindent 8 }}
 
@@ -930,14 +973,14 @@ data:
 
             topic_prefix = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.topicPrefix | default $region.name }}"
 
-            {{- if .Values.chirpstack.useCommonMqttSettings }}
+            {{- if $.Values.chirpstack.useCommonMqttSettings }}
             server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
             username = "${MQTT_USERNAME}"
             password = "${MQTT_PASSWORD}"
             qos = {{ $.Values._common.mqtt.qos | default 0 }}
             clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
             client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
-            keep_alive_interval="{{ and .Values._common.mqtt .Values._common.mqtt.keepAliveInterval | default "30s" }}"  
+            keep_alive_interval="{{ and $.Values._common.mqtt $.Values._common.mqtt.keepAliveInterval | default "30s" }}"  
             ca_cert = "${MQTT_CA_CERT}"
             tls_cert = "${MQTT_TLS_CERT}"
             tls_key = "${MQTT_TLS_KEY}"
@@ -945,7 +988,7 @@ data:
             server="{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.server | default "tcp://127.0.0.1:1883/" }}" 
             username = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.username | default "" }}" 
             password = "{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.password | default "" }}"
-            qos = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt..qos | default 2 }}
+            qos = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.qos | default 2 }}
             clean_session = {{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.cleanSession | default true }}
             client_id = #{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.server | default "chirpstack" }}" 
             keep_alive_interval="{{ and $region.settings $region.settings.gateway $region.settings.gateway.backend $region.settings.gateway.backend.mqtt $region.settings.gateway.backend.mqtt.keepAliveInterval | default "30s" }}"  
