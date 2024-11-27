@@ -1,7 +1,17 @@
 # Helm chart for chirpstack 4
+to add repo use: https://runeroven.github.io/chirpstack/
 
-Complete settings with default values 
-Chart will deploy with minimal settings but all parents in the config: needs to exists.
+Complete settings with default values
+The current Values file consists of a minimal setup.  
+Add the relevant settings to the values for your setup.  
+If not using the settings the config file will deploy to default.
+
+Chart will deploy with minimal settings but all parents in the config section for chirpstack and gb needs to exists.
+
+Use the region section in chirpstack to select the regions you want to enable. The frequency settings will be derived from preconfigured json files.
+For a complete list of avalible regions check configurations folder or visit [chirpstack](https://www.chirpstack.io/) where you also find a description of all settings.
+
+
 ```yaml
 _common:
   namespace: "chirpstack"
