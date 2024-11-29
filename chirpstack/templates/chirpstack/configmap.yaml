@@ -429,7 +429,7 @@ data:
         {{- end }}
         ]
         {{- else }}
-        brokers[
+        brokers=[
           "localhost:9092"
         ]
         {{- end }}
