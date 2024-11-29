@@ -932,7 +932,7 @@ data:
           # MQTT configuration.
           [regions.gateway.backend.mqtt]
 
-            topic_prefix = {{ ((((($region).settings).gateway).backend).mqtt).topicPrefix | default $region.name }}"
+            topic_prefix = "{{ ((((($region).settings).gateway).backend).mqtt).topicPrefix | default $region.name }}"
 
             {{- if $.Values.chirpstack.useCommonMqttSettings }}
             server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"

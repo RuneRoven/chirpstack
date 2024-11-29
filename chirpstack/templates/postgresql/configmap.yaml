@@ -41,14 +41,14 @@ data:
   002-chirpstack_extensions.sh: |
     #!/bin/bash
     set -e
-
+    echo "PGPASSWORD: $ROLE_PASSWORD"
     # Determine the PostgreSQL connection parameters
     if [ -z "${POSTGRES_HOST}" ]; then
     echo "Using local PostgreSQL socket for connection."
     PSQL_CMD="psql --username="${PGUSER}""
     else
     echo "Using external PostgreSQL host: ${POSTGRES_HOST}:${POSTGRES_PORT}"
-    PSQL_CMD="psql --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --username="${PGUSER}""
+    PSQL_CMD="psql --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --username="${DB_ROLE}""
     fi
 
     # Connect to the chirpstack database
