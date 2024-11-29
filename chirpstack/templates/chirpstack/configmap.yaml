@@ -882,7 +882,7 @@ data:
       # This configures the map attribution. The default attribution relates to the
       # default tileserver_url (OSM). If you configure a different tile-server, you
       # might need to update the map_attribution.
-      map_attribution="{{ ((.Values.chirpstack.config).ui).mapAttribution  | default "&copy; <a href=\"http://osm.org/copyright\">OpenStreetMap</a> contributors" }}"
+      map_attribution="{{ ((.Values.chirpstack.config).ui).mapAttribution | default "&copy; <a href=\\\"http://osm.org/copyright\\\">OpenStreetMap</a> contributors" }}"
 
       {{- ((.Values.chirpstack.config).ui).extra | default "" | nindent 6 }}
 
