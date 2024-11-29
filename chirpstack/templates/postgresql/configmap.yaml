@@ -51,9 +51,16 @@ data:
     PSQL_CMD="psql --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --username="${PGUSER}""
     fi
 
-    # Connect to the chirpstack database and check for extensions
+    # Connect to the chirpstack database
+    echo "Connecting to ${DB_NAME} database..."
     ${PSQL_CMD} --dbname="${DB_NAME}" -v ON_ERROR_STOP=1 <<EOSQL
+    \c ${DB_NAME}
+
     -- Check and create pg_trgm extension if it does not exist
-    SELECT 'CREATE EXTENSION pg_trgm;' WHERE NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') \gexec
-    \q
+    if ! EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
+        CREATE EXTENSION pg_trgm;
+        RAISE NOTICE 'pg_trgm extension created';
+    ELSE
+        RAISE NOTICE 'pg_trgm extension already exists';
+    END IF;
     EOSQL
