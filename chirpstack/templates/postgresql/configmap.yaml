@@ -42,6 +42,7 @@ data:
     #!/bin/bash
     set -e
     echo "PGPASSWORD: $ROLE_PASSWORD"
+    echo "PGPUSER: $DB_ROLE"
     # Determine the PostgreSQL connection parameters
     if [ -z "${POSTGRES_HOST}" ]; then
     echo "Using local PostgreSQL socket for connection."
