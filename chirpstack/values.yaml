@@ -19,10 +19,10 @@ _common:
       password: chirpstack
       sslmode: "disable"
       # SSL mode options:
-      #  * disable - no SSL
-      #  * require - Always SSL (skip verification)
-      #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
-      #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+      # SSL mode options:
+      #  * disable - Do not use TLS
+      #  * prefer - Attempt to connect with TLS but allow sessions without
+      #  * require - Require the use of TLS
       caCert: "" # CA certificate (optional). Set this to the path of the CA certificate in case you are using TLS and the server-certificate is not signed by a CA in the platform certificate store.
       maxOpenConnections: 10 # This sets the max. number of open connections that are allowed in the PostgreSQL connection pool.
       minIdleConnections: 0 # This sets the min. number of idle connections in the PostgreSQL connection pool (0 = equal to max_open_connections).
