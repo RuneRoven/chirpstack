@@ -86,11 +86,16 @@ spec:
           {{- else }}
             value: "redis.{{ .Values._common.namespace }}.svc.cluster.local:{{ .Values.redis.service.port }}"
           {{- end }}
-          - name: POSTGRESQL_HOST  
           {{- if .Values._common.postgres.external.enabled }}
-            value: "{{ .Values._common.postgres.external.host }}:{{ .Values._common.postgres.external.port }}"
+          - name: POSTGRESQL_HOST  
+            value: "{{ .Values._common.postgres.external.host }}"
+          - name: POSTGRESSQL_PORT
+            value: {{ .Values._common.postgres.external.port | int | quote }}
           {{- else }}
-            value: "postgres.{{ .Values._common.namespace }}.svc.cluster.local:{{ .Values.postgres.service.port }}"
+          - name: POSTGRESQL_HOST  
+            value: "postgres.{{ .Values._common.namespace }}.svc.cluster.local"
+          - name: POSTGRESSQL_PORT
+            value: {{ .Values.postgres.service.port | int | quote }}
           {{- end }}
           - name: MQTT_USERNAME
             valueFrom:
@@ -121,22 +126,12 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: db-creds
-                key: adminPassword
+                key: password
           - name: PGUSER
             valueFrom:
               secretKeyRef:
                 name: db-creds
-                key: postgresUser
-          - name: DB_ROLE
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
                 key: role
-          - name: ROLE_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
-                key: password
           - name: CA_CERT
             valueFrom:
               secretKeyRef:
