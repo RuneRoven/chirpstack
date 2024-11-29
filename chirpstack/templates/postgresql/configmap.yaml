@@ -53,14 +53,12 @@ data:
 
     # Connect to the chirpstack database
     echo "Connecting to ${DB_NAME} database..."
-    ${PSQL_CMD} --dbname="${DB_NAME}" -v ON_ERROR_STOP=1 <<EOSQL
-    \c ${DB_NAME}
-
-    -- Check and create pg_trgm extension if it does not exist
-    if ! EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
+    # Check if pg_trgm extension exists and create it if not
+    if ! ${PSQL_CMD} --dbname="${DB_NAME}" -t -c "SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'" | grep -q 1; then
+        echo "Creating pg_trgm extension"
+        ${PSQL_CMD} --dbname="${DB_NAME}" -v ON_ERROR_STOP=1 <<EOSQL
         CREATE EXTENSION pg_trgm;
-        RAISE NOTICE 'pg_trgm extension created';
-    ELSE
-        RAISE NOTICE 'pg_trgm extension already exists';
-    END IF;
     EOSQL
+    else
+        echo "pg_trgm extension already exists."
+    fi
