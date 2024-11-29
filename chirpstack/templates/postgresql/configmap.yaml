@@ -54,19 +54,15 @@ data:
     # Connect to the chirpstack database and check for extensions
     ${PSQL_CMD} --dbname="${DB_NAME}" -v ON_ERROR_STOP=1 <<EOSQL
     \c ${DB_NAME}
-    -- Check and create extensions if they do not exist
+    -- Check and create pg_trgm extension if it does not exist
     DO \$\$
     BEGIN
-        -- Loop over extensions
-        FOR ext IN ARRAY['pg_trgm', 'hstore'] LOOP
-            IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = ext) THEN
-                RAISE NOTICE 'Creating extension %', ext;
-                EXECUTE 'CREATE EXTENSION ' || ext;
-            ELSE
-                RAISE NOTICE 'Extension % already exists.', ext;
-            END IF;
-        END LOOP;
+        IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
+            RAISE NOTICE 'Creating extension pg_trgm';
+            EXECUTE 'CREATE EXTENSION pg_trgm';
+        ELSE
+            RAISE NOTICE 'Extension pg_trgm already exists';
+        END IF;
     END \$\$;
-
     \q
     EOSQL
