@@ -1,0 +1,37 @@
+{{- if not .Values._common.redis.external.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  selector:
+    matchLabels:
+      app: redis 
+  serviceName: "redis"
+  replicas: 1 
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag | default "redis:7-alpine" }}"
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.redis.service.port }}
+          name: redis
+        volumeMounts:
+          - name: {{ .Values.redis.volumeMounts.name  }}
+            mountPath: {{ .Values.redis.volumeMounts.mountPath  }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.redis.volumeMounts.name  }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redis.volumeClaim.resources.requests.storage }}
+{{- end }}
+

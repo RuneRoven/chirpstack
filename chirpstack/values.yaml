@@ -1,0 +1,171 @@
+_common:
+  namespace: "chirpstack"
+  mqtt:
+    host: "united-manufacturing-hub-mqtt.united-manufacturing-hub.svc.cluster.local"
+    port: 1883
+    username: ""
+    password: ""
+    qos: 2
+    cleanSession: false
+    clientId: "chirpstack"
+    keepAliveInterval: "30s" # This defines the maximum time that that should pass without communication between the client and server.
+
+  postgres: 
+    settings: # common settings for postgres
+      postgresUser: chirpstack
+      adminPassword: chirpstack
+      dbName: chirpstack
+      role: chirpstack
+      password: chirpstack
+      sslmode: "disable"
+      # SSL mode options:
+      #  * disable - no SSL
+      #  * require - Always SSL (skip verification)
+      #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
+      #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+      caCert: "" # CA certificate (optional). Set this to the path of the CA certificate in case you are using TLS and the server-certificate is not signed by a CA in the platform certificate store.
+      maxOpenConnections: 10 # This sets the max. number of open connections that are allowed in the PostgreSQL connection pool.
+      minIdleConnections: 0 # This sets the min. number of idle connections in the PostgreSQL connection pool (0 = equal to max_open_connections).
+    external: 
+      enabled: true # if enabled, host and port needs to point to external postgres. If not enabled local postgres will be deployed and used
+      host: "united-manufacturing-hub.united-manufacturing-hub.svc.cluster.local"
+      port: 5432
+  redis: 
+    settings:
+      tls: false
+      cluster : false 
+    external:
+      enabled: false # if enabled, host and port needs to point to external redis. If not enabled local redis will be deployed and used
+      host: "local.redis"
+      port: 6379  
+
+
+chirpstack:
+  replicaCount: 1
+  image:
+    repository: chirpstack/chirpstack
+    pullPolicy: IfNotPresent
+    tag: "4"
+  args: 
+    - "-c"
+    - "/etc/chirpstack"
+  service:
+    port: 8080
+    type: ClusterIP
+  volumeMounts: 
+    name: configuration
+    mountPath: /etc/chirpstack
+  volumes: 
+    name: configuration
+    configMap:
+      name: chirpstack-configuration
+  region:
+    - name: "eu868" # name on region to enable for the chart to select the correct settings file
+      settings: 
+        gateway:
+          private : false  # If enabled, gateways can only be used by devices under the same tenant.
+          enabledBackend: "mqtt" # The enabled backend type.
+        network: 
+    #- name: "eu433"
+  useCommonMqttSettings: true
+  config: 
+    logging: 
+    postgresql:
+    redis: 
+    api: 
+      interface: "0.0.0.0"
+      port: "8080"   # port to bind the API interface to.
+      secret: "iLikePink" # This secret is used for generating login and API tokens, make sure this
+      # is never exposed. Changing this secret will invalidate all login and API
+      # tokens. The following command can be used to generate a random secret:
+      #   openssl rand -base64 32
+      extra: |
+        # extra settings for api not included in helm chart
+    gateway: 
+    network: # all network settings except regions which is set in chirpstack.region
+      netId: "010200" # Network identifier (NetID, 3 bytes) encoded as HEX (e.g. 010203).
+    monitoring: 
+    integration:
+    codec:
+    userAuthentication:
+    joinServer:
+    backendInterfaces:
+    roaming: 
+    ui:
+    extra:
+
+api:
+  image:
+    repository: chirpstack/chirpstack-rest-api
+    pullPolicy: IfNotPresent
+    tag: "4"
+  args: 
+    - "--server"
+    - "chirpstack:8080"
+    - "--bind"
+    - "0.0.0.0:8090"
+    - "--insecure"
+  service:
+    port: 8090
+    type: ClusterIP
+
+gb:  
+  image:
+    repository: chirpstack/chirpstack-gateway-bridge
+    pullPolicy: IfNotPresent
+    tag: "4"
+  volumeMounts:
+    mountPath: /etc/chirpstack-gateway-bridge
+  volumes:
+    configMap:
+      name: chirpstack-gateway-bridge-configuration
+  service:
+    port: 1700
+    type: ClusterIP
+  useCommonMqttSettings: true # mqtt values are populated in the config automatically from common mqtt settings, otherwise it needs to be specified in the config section.
+  config:
+    general:
+    filters:
+    backend: 
+    integration:
+    metrics:
+    metaData:
+    commands: 
+    extra:
+
+
+postgres:
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "14-alpine"
+  service:
+    port: 5432
+    type: ClusterIP
+  volumeMounts: 
+    name: data
+    mountPath: /var/lib/postgresql/data
+  volumes: 
+    initdb:
+      configMap:
+        name: postgres-initdb
+  volumeClaim:
+    resources:
+        requests:
+          storage: 500Mi
+      
+redis:
+  image:
+    repository: redis
+    pullPolicy: IfNotPresent
+    tag: "7-alpine"
+  service:
+    port: 6379
+    type: ClusterIP
+  volumeMounts: 
+    name: data
+    mountPath: /data
+  volumeClaim:
+    resources:
+        requests:
+          storage: 100Mi

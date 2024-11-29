@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: chirpstack-api
+  name: chirpstack-api
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chirpstack-api
+  template:
+    metadata:
+      labels:
+        app: chirpstack-api
+    spec:
+      containers:
+      - name: chirpstack-api
+        image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default "chirpstack/chirpstack-rest-api:4" }}"
+        args: 
+        {{- range .Values.api.args }}
+          - {{ . | quote }}
+        {{- end }}
+        imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.api.service.port }}

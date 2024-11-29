@@ -1,0 +1,205 @@
+{{- $settings := dict "firstRegion" "" "frequencyMin" 0 "frequencyMax" 0 }}
+
+{{ with .Values.chirpstack.region }}
+  {{- $selectedRegion := index . 0 }}
+  {{- $regionData := $.Files.Get (printf "configurations/region_%s.json" $selectedRegion.name) | fromJson }}
+  
+  {{- if $regionData.regions }}
+    {{- range $region := $regionData.regions }}
+      {{- if $region.gateway }}
+        
+        {{- $frequencies := list }}  {{/* Initialize an empty list */}}
+        
+        {{- range $channel := $region.gateway.channels }}
+          {{- if $channel.frequency }}
+            {{- $frequencyInt := int $channel.frequency }}  {{/* Cast frequency to int */}}
+            {{- $frequencies = append $frequencies $frequencyInt }}  {{/* Append frequency */}}
+          {{- end }}
+        {{- end }}
+        
+        {{- if gt (len $frequencies) 0 }}
+          {{- $minFrequency := (index $frequencies 0) }}  {{/* Start with the first frequency as the minimum */}}
+          {{- $maxFrequency := (index $frequencies 0) }}  {{/* Start with the first frequency as the maximum */}}
+          
+          {{- range $frequency := $frequencies }}
+            {{- if lt $frequency $minFrequency }}
+              {{- $minFrequency = $frequency }}  {{/* Update min if current frequency is lower */}}
+            {{- end }}
+            {{- if gt $frequency $maxFrequency }}
+              {{- $maxFrequency = $frequency }}  {{/* Update max if current frequency is higher */}}
+            {{- end }}
+          {{- end }}
+          
+          {{- $_ := set $settings "firstRegion" (upper $selectedRegion.name) }}
+          {{- $_ := set $settings "frequencyMin" $minFrequency }}
+          {{- $_ := set $settings "frequencyMax" $maxFrequency }}
+        
+        {{- else }}
+          {{- $_ := set $settings "firstRegion" (upper $selectedRegion.name) }}
+          {{- $_ := set $settings "frequencyMin" 867100000 }}
+          {{- $_ := set $settings "frequencyMax" 868800000 }}
+        {{- end }}
+        
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- $mqttUsername := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).username | default "" | b64dec }}
+{{- $mqttPassword := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).password | default "" | b64dec }}
+{{- $mqttCaCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).caCert | default "" | b64dec }}
+{{- $mqttTlsCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsCert | default "" | b64dec }}
+{{- $mqttTlsKey := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsKey | default "" | b64dec }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.gb.volumes.configMap.name | default "chirpstack-gateway-bridge-configuration"}} 
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+data:
+  chirpstack-gateway-bridge.toml: |
+    [general]
+    log_level={{ ((.Values.gb.config).general).logLevel | default 4 }}
+    log_json={{ ((.Values.gb.config).general).logJson | default false }}
+    log_to_syslog={{ ((.Values.gb.config).general).logToSyslog | default false }}
+    {{ ((.Values.gb.config).general).extra | default "" | nindent 4 }}
+
+    [filters]
+    net_ids=[
+      {{- range $index, $item := ((.Values.gb.config).filters).netIds | default list }}
+        "{{ $item }}"{{ if lt $index (sub (len ((.Values.gb.config).filters).netIds | default list) 1) }},{{ end }}
+      {{- end }}
+    ]
+    join_euis=[
+      {{- range $index, $item := and ((.Values.gb.config).filters).joinEuis | default list }}
+        "{{ $item }}"{{ if lt $index (sub (len ((.Values.gb.config).filters).joinEuis | default list) 1) }},{{ end }}
+      {{- end }}
+    ]
+    {{ ((.Values.gb.config).filters).extra  | default "" | nindent 4 }}
+
+    [backend]
+    type="{{ ((.Values.gb.config).backend).type | default "semtech_udp" }}"
+
+      [backend.semtechUdp]
+      udp_bind="{{ (((.Values.gb.config).backend).semtechUdp).udpBind | default "0.0.0.0:1700" }}"
+      fake_rx_time={{ (((.Values.gb.config).backend).semtechUdp).fakeRxTime | default false }}
+      {{ ((((.Values.gb.config).backend).semtechUdp).extra) | default "" | nindent 6 }}
+
+      [backend.concentratord]
+      event_url="{{ (((.Values.gb.config).backend).concentratord).eventUrl | default "ipc:///tmp/concentratord_event" }}"
+      command_url="{{ (((.Values.gb.config).backend).concentratord).commandUrl | default "ipc:///tmp/concentratord_command" }}"
+      {{ ((((.Values.gb.config).backend).concentratord).extra)  | default "" | nindent 6 }}
+
+      [backend.basicStation]
+      bind="{{ (((.Values.gb.config).backend).basicStation).bind | default ":3001" }}"
+      tls_cert="{{ (((.Values.gb.config).backend).basicStation).tlsCert | default "" }}"
+      tls_key="{{ (((.Values.gb.config).backend).basicStation).tlsKey | default "" }}"
+      ca_cert="{{ (((.Values.gb.config).backend).basicStation).caCert | default "" }}"
+      stats_interval="{{ (((.Values.gb.config).backend).basicStation).statsInterval | default "30s" }}"
+      ping_interval="{{ (((.Values.gb.config).backend).basicStation).pingInterval | default "1m0s" }}"
+      timesync_interval="{{ (((.Values.gb.config).backend).basicStation).timesyncInterval | default "0s" }}"
+      read_timeout="{{ (((.Values.gb.config).backend).basicStation).readTimeout | default "1m5s" }}"
+      write_timeout="{{ (((.Values.gb.config).backend).basicStation).writeTimeout | default "1s" }}"
+      region="{{ $settings.firstRegion }}"
+
+      # Minimal frequency (Hz).
+      frequency_min={{ $settings.frequencyMin }}
+      
+      # Maximum frequency (Hz).
+      frequency_max={{ $settings.frequencyMax }}
+      {{ ((((.Values.gb.config).backend).basicStation).extra) | default "" | nindent 6 }}
+    {{ ((.Values.gb.config).backend).extra  | default "" | default "" | nindent 4 }}
+
+    [integration]
+    marshaler="{{ ((.Values.gb.config).integration).marshaler | default "protobuf" }}"
+
+      [integration.mqtt]
+      event_topic_template="{{ (((.Values.gb.config).integration).mqtt).eventTopicTemplate | default "gateway/{{ .GatewayID }}/event/{{ .EventType }}" }}"
+      state_topic_template="{{ (((.Values.gb.config).integration).mqtt).stateTopicTemplate | default "gateway/{{ .GatewayID }}/state/{{ .StateType }}" }}"
+      command_topic_template="{{ (((.Values.gb.config).integration).mqtt).commandTopicTemplate | default "gateway/{{ .GatewayID }}/command/#" }}"
+      state_retained={{ (((.Values.gb.config).integration).mqtt).stateRetained | default true }}
+      keep_alive="{{ (((.Values.gb.config).integration).mqtt).keepAlive | default "30s" }}"
+      max_reconnect_interval="{{ (((.Values.gb.config).integration).mqtt).maxReconnectInterval | default "1m0s" }}"
+      terminate_on_connect_error={{ (((.Values.gb.config).integration).mqtt).terminateOnConnectError | default false }}
+      {{ (((.Values.gb.config).integration).mqtt).extra | default "" | nindent 6 }}
+
+      [integration.mqtt.auth]
+      type="{{ ((((.Values.gb.config).integration).mqtt).auth).type | default "generic" }}"
+      {{ ((((.Values.gb.config).integration).mqtt).auth).extra | default "" | nindent 6 }}
+
+        [integration.mqtt.auth.generic]
+        {{- if .Values.gb.useCommonMqttSettings }}
+        servers="tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+        username="{{ $mqttUsername }}"
+        password="{{ $mqttPassword }}"
+        qos={{ $.Values._common.mqtt.qos | default 0 }}
+        clean_session={{ $.Values._common.mqtt.cleanSession | default false }}
+        client_id="{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+        ca_cert="{{ $mqttCaCert }}"
+        tls_cert="{{ $mqttTlsCert }}"
+        tls_key="${{ $mqttTlsKey}}"
+        {{- else }}
+
+        servers=[
+          {{- range $index, $item := ((((((.Values.gb.config).integration).mqtt).auth).generic).servers | default list) }}
+            "{{ $item }}"{{ if lt $index (sub (len ((((((.Values.gb.config).integration).mqtt).auth).generic).servers | default list)) 1) }},{{ end }}
+          {{- end }}
+        ]
+        username="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).username) | default "" }}"
+        password="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).password) | default "" }}"
+        qos={{ ((((((.Values.gb.config).integration).mqtt).auth).generic).qos) | default 0 }}
+        clean_session={{ ((((((.Values.gb.config).integration).mqtt).auth).generic).cleanSession) | default false }}
+        client_id="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).clientId) | default "chirpstack" }}"
+        ca_cert="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).caCert) | default "" }}"
+        tls_cert="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).tlsCert) | default "" }}"
+        tls_key="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).tlsKey) | default "" }}"
+        
+        {{- end }}
+        {{ ((((((.Values.gb.config).integration).mqtt).auth).generic).extra) | default "" | nindent 8 }}
+
+
+        [integration.mqtt.auth.gcpCloudIotCore]
+        server="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).server | default "ssl://mqtt.googleapis.com:8883" }}"
+        device_id="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).deviceId | default "" }}"
+        project_id="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).projectId | default "" }}"
+        cloud_region="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).cloudRegion | default "" }}"
+        registry_id="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).registryId | default "" }}"
+        jwt_expiration="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).jwtExpiration | default "24h0m0s" }}"
+        jwt_key_file="{{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).jwtKeyFile | default "" }}"
+        {{ (((((.Values.gb.config).integration).mqtt).auth).gcpCloudIotCore).extra | default "" | nindent 8 }}
+
+        [integration.mqtt.auth.azureIotHub]
+        device_connection_string="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).deviceConnectionString | default "" }}"
+        sas_token_expiration="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).sasTokenExpiration | default "24h0m0s" }}"
+        device_id="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).deviceId | default "" }}"
+        hostname="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).hostname | default "" }}"
+        tls_cert="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).tlsCert | default "" }}"
+        tls_key="{{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).tlsKey | default "" }}"
+        {{ (((((.Values.gb.config).integration).mqtt).auth).azureIotHub).extra | default "" | nindent 8 }}
+
+    {{ ((.Values.gb.config).integration).extra | default "" | nindent 4 }}
+
+    [metrics]
+      [metrics.prometheus]
+      endpoint_enabled={{ (((.Values.gb.config).metrics).prometheus).endpointEnabled | default false }}
+      bind="{{ (((.Values.gb.config).metrics).prometheus).bind | default "" }}"
+      {{ (((.Values.gb.config).metrics).prometheus).extra | default "" | nindent 6 }}
+    {{ ((.Values.gb.config).metrics).extra | default "" | nindent 4 }}
+    
+    [meta_data]
+      [meta_data.static]
+      {{ (((.Values.gb.config).metaData).static) | default "" | nindent 8 }}
+
+      [meta_data.dynamic]
+      execution_interval="{{ (((.Values.gb.config).metaData).dynamic).executionInterval | default "1m0s" }}"
+      max_execution_duration="{{ (((.Values.gb.config).metaData).dynamic).maxExecutionDuration | default "1s" }}"
+      split_delimiter="{{ (((.Values.gb.config).metaData).dynamic).splitDelimiter | default "=" }}"
+      {{ (((.Values.gb.config).metaData).dynamic).extra | default "" | nindent 6 }}
+
+      [meta_data.dynamic.commands]
+      {{ (((.Values.gb.config).metaData).dynamic).commands | default "" | nindent 8 }}
+    {{ ((.Values.gb.config).metaData).extra | default "" | nindent 4 }}
+    [commands]
+    {{ ((.Values.gb.config).commands) | default "" | nindent 6 }}
+
+    {{ ((.Values.gb.config).extra) | default "" | nindent 4 }}

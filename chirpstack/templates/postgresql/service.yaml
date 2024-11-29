@@ -1,0 +1,18 @@
+{{- if not .Values._common.postgres.external.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  ports:
+  - name: postgres
+    port: {{ .Values.postgres.service.port }}
+    protocol: TCP
+    targetPort: {{ .Values.postgres.service.port }}
+  selector:
+    app: postgres
+  type: ClusterIP
+{{- end }}

@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.postgres.volumes.initdb.configMap.name }}
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+data:
+  001-init-chirpstack.sh: |
+    #!/bin/bash
+    set -e
+
+    # Determine the PostgreSQL connection parameters
+    if [ -z "${POSTGRES_HOST}" ]; then
+    echo "Using local PostgreSQL socket for connection."
+    PSQL_CMD="psql --username="${PGUSER}" --dbname=postgres"
+    else
+    echo "Using external PostgreSQL host: ${POSTGRES_HOST}:${POSTGRES_PORT}"
+    PSQL_CMD="psql --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --username="${PGUSER}" --dbname=postgres"
+    fi
+    ${PSQL_CMD} -v ON_ERROR_STOP=1 <<EOSQL
+    GRANT ${DB_ROLE} TO ${PGUSER};
+    EOSQL
+    # Check and create role if it does not exist
+    if ! ${PSQL_CMD} -t -c "SELECT 1 FROM pg_roles WHERE rolname='${DB_ROLE}'" | grep -q 1; then
+        echo "Creating role ${DB_ROLE}"
+        ${PSQL_CMD} -v ON_ERROR_STOP=1 <<EOSQL
+        CREATE ROLE ${DB_ROLE} WITH LOGIN PASSWORD '${ROLE_PASSWORD}';
+    EOSQL
+    else
+        echo "Role ${DB_ROLE} already exists."
+    fi
+
+    # Create the chirpstack database if it doesn't exist
+    if ! ${PSQL_CMD} -t -c "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
+        echo "Creating chirpstack database"
+        ${PSQL_CMD} -v ON_ERROR_STOP=1 <<EOSQL
+        CREATE DATABASE ${DB_NAME} WITH OWNER ${DB_ROLE};
+    EOSQL
+    else
+        echo "chirpstack database already exists."
+    fi
+  002-chirpstack_extensions.sh: |
+    #!/bin/bash
+    set -e
+
+    # Determine the PostgreSQL connection parameters
+    if [ -z "${POSTGRES_HOST}" ]; then
+    echo "Using local PostgreSQL socket for connection."
+    PSQL_CMD="psql --username="${PGUSER}""
+    else
+    echo "Using external PostgreSQL host: ${POSTGRES_HOST}:${POSTGRES_PORT}"
+    PSQL_CMD="psql --host="${POSTGRES_HOST}" --port="${POSTGRES_PORT}" --username="${PGUSER}""
+    fi
+
+    # Connect to the chirpstack database and check for extensions
+    ${PSQL_CMD} --dbname="${DB_NAME}" -v ON_ERROR_STOP=1 <<EOSQL
+    \c ${DB_NAME}
+    -- Check and create extensions if they do not exist
+    DO \$\$
+    BEGIN
+        -- Loop over extensions
+        FOR ext IN ARRAY['pg_trgm', 'hstore'] LOOP
+            IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = ext) THEN
+                RAISE NOTICE 'Creating extension %', ext;
+                EXECUTE 'CREATE EXTENSION ' || ext;
+            ELSE
+                RAISE NOTICE 'Extension % already exists.', ext;
+            END IF;
+        END LOOP;
+    END \$\$;
+
+    \q
+    EOSQL

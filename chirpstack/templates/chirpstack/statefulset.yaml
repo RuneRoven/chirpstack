@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chirpstack
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  selector:
+    matchLabels:
+      app: chirpstack 
+  serviceName: "chirpstack"
+  replicas: 1 
+  template:
+    metadata:
+      labels:
+        app: chirpstack
+    spec:
+      {{- if .Values._common.postgres.external.enabled }}
+      initContainers:
+      - name: init-chirpstack-db
+        image: postgres:latest
+        env:
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: adminPassword
+          - name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: postgresUser
+          - name: DB_ROLE
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: role
+          - name: ROLE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
+          - name: POSTGRES_HOST
+            value: "{{ .Values._common.postgres.external.host }}"
+          - name: POSTGRES_PORT
+            value: {{ .Values._common.postgres.external.port | int | quote }}
+          - name: DB_NAME
+            value: "{{ .Values._common.postgres.settings.dbName }}"
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "PGUSER: $PGUSER"
+          echo "PGPASSWORD: $PGPASSWORD"
+          echo "ROLE_PASSWORD: $ROLE_PASSWORD"
+          echo "DB_ROLE: $DB_ROLE"
+          echo "POSTGRES_HOST: $POSTGRES_HOST"
+          echo "POSTGRES_PORT: $POSTGRES_PORT"
+          echo "DB_NAME: $DB_NAME"
+          # Wait for PostgreSQL to be available
+          until psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${PGUSER}" -d "postgres" -c "SELECT 1"; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          # Execute initialization scripts
+          for script in /initdb/*.sh; do
+            echo "Running script: $script"
+            bash "$script"
+          done
+        volumeMounts:
+        - name: init-scripts
+          mountPath: /initdb
+      {{- end }}
+      containers:
+      - name: chirpstack
+        image: "{{ .Values.chirpstack.image.repository }}:{{ .Values.chirpstack.image.tag | default "chirpstack/chirpstack:4" }}"
+        args: 
+         {{- range .Values.chirpstack.args }}
+          - {{ . | quote }}
+        {{- end }}
+        imagePullPolicy: {{ .Values.chirpstack.image.pullPolicy }}
+        env:
+          - name: MQTT_BROKER_HOST
+            value: "{{ .Values._common.mqtt.host }}:{{ .Values._common.mqtt.port }}"
+          - name: REDIS_HOST
+          {{- if .Values._common.redis.external.enabled }}
+            value: "{{ .Values._common.redis.external.host }}:{{ .Values._common.redis.external.port }}"
+          {{- else }}
+            value: "redis.{{ .Values._common.namespace }}.svc.cluster.local:{{ .Values.redis.service.port }}"
+          {{- end }}
+          - name: POSTGRESQL_HOST  
+          {{- if .Values._common.postgres.external.enabled }}
+            value: "{{ .Values._common.postgres.external.host }}:{{ .Values._common.postgres.external.port }}"
+          {{- else }}
+            value: "postgres.{{ .Values._common.namespace }}.svc.cluster.local:{{ .Values.postgres.service.port }}"
+          {{- end }}
+          - name: MQTT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: username
+          - name: MQTT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: password
+          - name: MQTT_CA_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: caCert
+          - name: MQTT_TLS_CERT
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsCert
+          - name: MQTT_TLS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: mqtt-creds
+                key: tlsKey
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: adminPassword
+          - name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: postgresUser
+          - name: DB_ROLE
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: role
+          - name: ROLE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
+          - name: CA_CERT
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: caCert
+        ports:
+        - containerPort: {{ .Values.chirpstack.service.port }}
+          name: web
+        volumeMounts:
+        - name: {{ .Values.chirpstack.volumeMounts.name }}
+          mountPath: {{ .Values.chirpstack.volumeMounts.mountPath }}
+      volumes: 
+      - name: {{ .Values.chirpstack.volumes.name }}
+        configMap:
+          name: {{ .Values.chirpstack.volumes.configMap.name | default "chirpstack-configuration" }}
+      - name: init-scripts
+        configMap: 
+          name: {{ .Values.postgres.volumes.initdb.configMap.name }}
