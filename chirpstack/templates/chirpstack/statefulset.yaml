@@ -127,6 +127,11 @@ spec:
               secretKeyRef:
                 name: db-creds
                 key: password
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-creds
+                key: password
           - name: PGUSER
             valueFrom:
               secretKeyRef:
