@@ -1,5 +1,13 @@
 _common:
   namespace: "chirpstack"
+  certificates: # add your certificates here. they will be mounted to /etc/ssl/custom/extra/<key.crt>
+                # To use the certificate, enter the path to certificate in the config.
+    test1.crt: "saaaa"
+    test2.crt: "das"
+    test3.crt: |
+      begin 
+      dasdsad 
+      end
   mqtt:
     host: "united-manufacturing-hub-mqtt.united-manufacturing-hub.svc.cluster.local"
     port: 1883
@@ -12,18 +20,37 @@ _common:
 
   postgres: 
     settings: # common settings for postgres
-      postgresUser: chirpstack
-      adminPassword: chirpstack
-      dbName: chirpstack
-      role: chirpstack
-      password: chirpstack
-      sslmode: "disable"
-      # SSL mode options:
+      postgresUser: "admin"
+      adminPassword: "pinkBubblesGoApe"
+      dbName: "chirpstack"
+      role: "chirpstack"
+      password: "chirpstack"
+      sslmode: "require"
       # SSL mode options:
       #  * disable - Do not use TLS
       #  * prefer - Attempt to connect with TLS but allow sessions without
       #  * require - Require the use of TLS
-      caCert: "" # CA certificate (optional). Set this to the path of the CA certificate in case you are using TLS and the server-certificate is not signed by a CA in the platform certificate store.
+      caCert: |
+        -----BEGIN CERTIFICATE-----
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        rw4435645645643563456345634564fdfsdfgsdfgdsfgdsfgdsfgdfgg5646456
+        X7NN6M58w9XogKMNXv44YlM/R1T8F+H4aki8DtdFYYowY1riyauQjDWo9NIbT3Ay
+        amv1Z8I=
+        -----END CERTIFICATE-----
       maxOpenConnections: 10 # This sets the max. number of open connections that are allowed in the PostgreSQL connection pool.
       minIdleConnections: 0 # This sets the min. number of idle connections in the PostgreSQL connection pool (0 = equal to max_open_connections).
     external: 
@@ -45,7 +72,7 @@ chirpstack:
   image:
     repository: chirpstack/chirpstack
     pullPolicy: IfNotPresent
-    tag: "4"
+    tag: "4.6.0"
   args: 
     - "-c"
     - "/etc/chirpstack"

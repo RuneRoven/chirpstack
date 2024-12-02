@@ -15,6 +15,15 @@ For a complete list of avalible regions check configurations folder or visit [ch
 ```yaml
 _common:
   namespace: "chirpstack"
+  certificates: # add your certificates here. they will be stored in a secret and  mounted to /etc/ssl/custom/extra/<key.crt>
+              # To use the certificate, enter the path to certificate in the config.
+              # create as many as you need
+  test1.crt: "saaaa"
+  test2.crt: "das"
+  test3.crt: |
+    begin 
+    dasdsad 
+    end
   mqtt:
     host: broker.local
     port: 1883

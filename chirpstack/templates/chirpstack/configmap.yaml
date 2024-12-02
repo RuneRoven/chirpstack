@@ -1,14 +1,11 @@
 {{- $mqttUsername := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).username | default "" | b64dec }}
 {{- $mqttPassword := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).password | default "" | b64dec }}
-{{- $mqttCaCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).caCert | default "" | b64dec }}
-{{- $mqttTlsCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsCert | default "" | b64dec }}
-{{- $mqttTlsKey := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsKey | default "" | b64dec }}
 
 {{- $postgresUser := ((lookup "v1" "Secret" .Release.Namespace "db-creds").data).postgresUser | default "" | b64dec }}
 {{- $adminPassword := ((lookup "v1" "Secret" .Release.Namespace "db-creds").data).adminPassword | default "" | b64dec }}
 {{- $password := ((lookup "v1" "Secret" .Release.Namespace "db-creds").data).password | default "" | b64dec }}
 {{- $role := ((lookup "v1" "Secret" .Release.Namespace "db-creds").data).role | default "" | b64dec }}
-{{- $caCert := ((lookup "v1" "Secret" .Release.Namespace "db-creds").data).caCert | default "" | b64dec }}
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -34,10 +31,9 @@ data:
       # Format example: postgres://<USERNAME>:<PASSWORD>@<HOSTNAME>/<DATABASE>?sslmode=<SSLMODE>.
       #
       # SSL mode options:
-      #  * disable - no SSL
-      #  * require - Always SSL (skip verification)
-      #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
-      #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+      #  * disable - Do not use TLS
+      #  * prefer - Attempt to connect with TLS but allow sessions without
+      #  * require - Require the use of TLS
       {{- if .Values._common.postgres.external.enabled }}
       dsn="postgres://{{ $role }}:{{ $password }}@{{ $.Values._common.postgres.external.host }}/{{ $.Values._common.postgres.settings.dbName }}?sslmode={{ $.Values._common.postgres.settings.sslmode }}"
       {{- else }}
@@ -59,7 +55,7 @@ data:
       # Set this to the path of the CA certificate in case you are using TLS and
       # the server-certificate is not signed by a CA in the platform certificate
       # store.
-      ca_cert="{{ $caCert }}"
+      ca_cert="/etc/ssl/custom/pgca.pem"
 
       {{ ((.Values.chirpstack.config).postgresql).extra | default "" | nindent 6 }}
 
@@ -315,27 +311,27 @@ data:
         
         json={{ (((.Values.chirpstack.config).integration).mqtt).json | default true }}
         {{- if .Values.chirpstack.useCommonMqttSettings }}
-        server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
-        username = "{{ $mqttUsername }}"
-        password = "{{ $mqttPassword }}"
-        qos = {{ $.Values._common.mqtt.qos | default 0 }}
-        clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
-        client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+        server="tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+        username="{{ $mqttUsername }}"
+        password="{{ $mqttPassword }}"
+        qos={{ $.Values._common.mqtt.qos | default 0 }}
+        clean_session={{ $.Values._common.mqtt.cleanSession | default false }}
+        client_id="{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
         keep_alive_interval="{{ and .Values._common.mqtt .Values._common.mqtt.keepAliveInterval | default "30s" }}"  
-        ca_cert = "{{ $mqttCaCert }}"
-        tls_cert = "{{ $mqttTlsCert }}"
-        tls_key = "{{ $mqttTlsKey }}"
+        ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
+        tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
+        tls_key="{{ $.Values._common.mqtt.tlsKey | default "" }}"
         {{- else }}
         server="{{ (((.Values.chirpstack.config).integration).mqtt).server | default "tcp://127.0.0.1:1883/" }}" 
-        username = "{{ (((.Values.chirpstack.config).integration).mqtt).username | default "" }}" 
-        password = "{{ (((.Values.chirpstack.config).integration).mqtt).password | default "" }}"
-        qos = {{ (((.Values.chirpstack.config).integration).mqtt).mqtt.qos | default 2 }}
-        clean_session = {{ (((.Values.chirpstack.config).integration).mqtt).cleanSession | default true }}
-        client_id = {{ (((.Values.chirpstack.config).integration).mqtt).server | default "chirpstack" }}" 
+        username="{{ (((.Values.chirpstack.config).integration).mqtt).username | default "" }}" 
+        password="{{ (((.Values.chirpstack.config).integration).mqtt).password | default "" }}"
+        qos={{ (((.Values.chirpstack.config).integration).mqtt).mqtt.qos | default 2 }}
+        clean_session={{ (((.Values.chirpstack.config).integration).mqtt).cleanSession | default true }}
+        client_id={{ (((.Values.chirpstack.config).integration).mqtt).server | default "chirpstack" }}" 
         keep_alive_interval="{{ (((.Values.chirpstack.config).integration).mqtt).keepAliveInterval | default "30s" }}"  
-        ca_cert = "{{ (((.Values.chirpstack.config).integration).mqtt).caCert | default "" }}"  
-        tls_cert = "{{ (((.Values.chirpstack.config).integration).mqtt).tlsCert | default "" }}"  
-        tls_key = "{{ (((.Values.chirpstack.config).integration).mqtt).tlsKey | default "" }}"  
+        ca_cert="{{ (((.Values.chirpstack.config).integration).mqtt).caCert | default "" }}"  
+        tls_cert="{{ (((.Values.chirpstack.config).integration).mqtt).tlsCert | default "" }}"  
+        tls_key="{{ (((.Values.chirpstack.config).integration).mqtt).tlsKey | default "" }}"  
         {{- end }}
         {{- (((.Values.chirpstack.config).integration).mqtt).extra | default "" | nindent 8 }}
 
@@ -367,10 +363,9 @@ data:
         # Format example: postgres://<USERNAME>:<PASSWORD>@<HOSTNAME>/<DATABASE>?sslmode=<SSLMODE>.
         #
         # SSL mode options:
-        #  * disable - no SSL
-        #  * require - Always SSL (skip verification)
-        #  * verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
-        #  * verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+        #  * disable - Do not use TLS
+        #  * prefer - Attempt to connect with TLS but allow sessions without
+        #  * require - Require the use of TLS
         {{- if (((.Values.chirpstack.config).integration).postgresql).useCustom  }}
         dsn="{{ (((.Values.chirpstack.config).integration).postgresql).dsn | default "postgresql://chirpstack_integration:chirpstack_integration@localhost/chirpstack_integration?sslmode=disable" }}"  
         {{- else if .Values._common.postgres.external.enabled }}
@@ -395,7 +390,7 @@ data:
         {{- if (((.Values.chirpstack.config).integration).postgresql).useCustom  }}
         ca_cert={{ (((.Values.chirpstack.config).integration).postgresql).caCert | default "" }}"  
         {{- else }}
-        ca_cert="{{ $caCert }}"
+        ca_cert="/etc/ssl/custom/pgca.pem"
         {{- end }}
         {{- (((.Values.chirpstack.config).integration).postgresql).extra | default "" | nindent 8 }}
 
@@ -942,9 +937,9 @@ data:
             clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
             client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
             keep_alive_interval="{{ and $.Values._common.mqtt $.Values._common.mqtt.keepAliveInterval | default "30s" }}"  
-            ca_cert = "{{ $mqttCaCert }}"
-            tls_cert = "{{ $mqttTlsCert }}"
-            tls_key = "{{ $mqttTlsKey }}"
+            ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
+            tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
+            tls_key="{{ $.Values._common.mqtt.tlsKey | default "" }}"
             {{- else }}
             server="{{ ((((($region).settings).gateway).backend).mqtt).server | default "tcp://127.0.0.1:1883/" }}" 
             username = "{{ ((((($region).settings).gateway).backend).mqtt).username | default "" }}" 

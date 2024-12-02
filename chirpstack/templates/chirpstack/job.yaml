@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-chirpstack-db
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-1"  # Ensures the job runs before the StatefulSet deployment
+    "helm.sh/hook-delete-policy": hook-succeeded  # Ensures the job is cleaned up after execution
+spec:
+  template:
+    spec:
+      containers:
+        - name: init-chirpstack-db
+          image: postgres:latest
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-creds
+                  key: adminPassword
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: db-creds
+                  key: postgresUser
+            - name: DB_ROLE
+              valueFrom:
+                secretKeyRef:
+                  name: db-creds
+                  key: role
+            - name: ROLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-creds
+                  key: password
+            - name: POSTGRES_HOST
+              value: "{{ .Values._common.postgres.external.host }}"
+            - name: POSTGRES_PORT
+              value: {{ .Values._common.postgres.external.port | int | quote }}
+            - name: DB_NAME
+              value: "{{ .Values._common.postgres.settings.dbName }}"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "PGUSER: $PGUSER"
+              echo "PGPASSWORD: $PGPASSWORD"
+              echo "ROLE_PASSWORD: $ROLE_PASSWORD"
+              echo "DB_ROLE: $DB_ROLE"
+              echo "POSTGRES_HOST: $POSTGRES_HOST"
+              echo "POSTGRES_PORT: $POSTGRES_PORT"
+              echo "DB_NAME: $DB_NAME"
+              # Wait for PostgreSQL to be available
+              until psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${PGUSER}" -d "postgres" -c "SELECT 1"; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              # Execute initialization scripts
+              for script in /initdb/*.sh; do
+                echo "Running script: $script"
+                bash "$script"
+              done
+          volumeMounts:
+          - name: init-scripts
+            mountPath: /initdb
+      restartPolicy: OnFailure
+      volumes:
+        - name: init-scripts
+          configMap: 
+            name: {{ .Values.postgres.volumes.initdb.configMap.name }}
+  backoffLimit: 4

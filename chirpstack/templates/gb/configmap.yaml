@@ -47,9 +47,6 @@
 
 {{- $mqttUsername := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).username | default "" | b64dec }}
 {{- $mqttPassword := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).password | default "" | b64dec }}
-{{- $mqttCaCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).caCert | default "" | b64dec }}
-{{- $mqttTlsCert := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsCert | default "" | b64dec }}
-{{- $mqttTlsKey := ((lookup "v1" "Secret" .Release.Namespace "mqtt-creds").data).tlsKey | default "" | b64dec }}
 
 apiVersion: v1
 kind: ConfigMap
@@ -135,9 +132,9 @@ data:
         qos={{ $.Values._common.mqtt.qos | default 0 }}
         clean_session={{ $.Values._common.mqtt.cleanSession | default false }}
         client_id="{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
-        ca_cert="{{ $mqttCaCert }}"
-        tls_cert="{{ $mqttTlsCert }}"
-        tls_key="${{ $mqttTlsKey}}"
+        ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
+        tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
+        tls_key="{{ $.Values._common.mqtt.tlsKey | default "" }}"
         {{- else }}
 
         servers=[

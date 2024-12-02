@@ -3,6 +3,8 @@ kind: StatefulSet
 metadata:
   name: chirpstack
   namespace: {{ .Values._common.namespace | default "chirpstack" }}
+  annotations: 
+    "helm.sh/hook-weight": "0"  # Ensure the StatefulSet runs after the job
 spec:
   selector:
     matchLabels:
@@ -14,61 +16,6 @@ spec:
       labels:
         app: chirpstack
     spec:
-      {{- if .Values._common.postgres.external.enabled }}
-      initContainers:
-      - name: init-chirpstack-db
-        image: postgres:latest
-        env:
-          - name: PGPASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
-                key: adminPassword
-          - name: PGUSER
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
-                key: postgresUser
-          - name: DB_ROLE
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
-                key: role
-          - name: ROLE_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: db-creds
-                key: password
-          - name: POSTGRES_HOST
-            value: "{{ .Values._common.postgres.external.host }}"
-          - name: POSTGRES_PORT
-            value: {{ .Values._common.postgres.external.port | int | quote }}
-          - name: DB_NAME
-            value: "{{ .Values._common.postgres.settings.dbName }}"
-        command: ["/bin/bash", "-c"]
-        args:
-        - |
-          echo "PGUSER: $PGUSER"
-          echo "PGPASSWORD: $PGPASSWORD"
-          echo "ROLE_PASSWORD: $ROLE_PASSWORD"
-          echo "DB_ROLE: $DB_ROLE"
-          echo "POSTGRES_HOST: $POSTGRES_HOST"
-          echo "POSTGRES_PORT: $POSTGRES_PORT"
-          echo "DB_NAME: $DB_NAME"
-          # Wait for PostgreSQL to be available
-          until psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${PGUSER}" -d "postgres" -c "SELECT 1"; do
-            echo "Waiting for PostgreSQL..."
-            sleep 2
-          done
-          # Execute initialization scripts
-          for script in /initdb/*.sh; do
-            echo "Running script: $script"
-            bash "$script"
-          done
-        volumeMounts:
-        - name: init-scripts
-          mountPath: /initdb
-      {{- end }}
       containers:
       - name: chirpstack
         image: "{{ .Values.chirpstack.image.repository }}:{{ .Values.chirpstack.image.tag | default "chirpstack/chirpstack:4" }}"
@@ -148,10 +95,28 @@ spec:
         volumeMounts:
         - name: {{ .Values.chirpstack.volumeMounts.name }}
           mountPath: {{ .Values.chirpstack.volumeMounts.mountPath }}
+        - name: cert-volume
+          mountPath: /etc/ssl/custom/pgca.pem
+          subPath: pgca.pem
+          readOnly: true 
+        - name: certs-extra
+          mountPath: /etc/ssl/custom/extra
+          readOnly: true
       volumes: 
       - name: {{ .Values.chirpstack.volumes.name }}
         configMap:
           name: {{ .Values.chirpstack.volumes.configMap.name | default "chirpstack-configuration" }}
-      - name: init-scripts
-        configMap: 
-          name: {{ .Values.postgres.volumes.initdb.configMap.name }}
+      - name: cert-volume
+        secret:
+          secretName: db-creds
+          items:
+          - key: caCert
+            path: pgca.pem
+      - name: certs-extra
+        secret:
+          secretName: certs
+        items: 
+        {{- range $key, $path := .Values.certificates }}
+        - key: $key
+          path: $key
+        {{- end }}
