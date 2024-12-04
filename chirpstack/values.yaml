@@ -8,6 +8,15 @@ _common:
       begin 
       dasdsad 
       end
+  exposeChirpstack: # creates a service for external access to chirpstack
+    enabled: true 
+    port: 8082
+  exposeGb: # creates a service for external access to chirpstack
+    enabled: true 
+    port: 1700
+  exposeApi: # creates a service for external access to chirpstack
+    enabled: false 
+    port: 8090
   mqtt:
     host: "united-manufacturing-hub-mqtt.united-manufacturing-hub.svc.cluster.local"
     port: 1883

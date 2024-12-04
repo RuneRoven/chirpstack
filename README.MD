@@ -24,6 +24,15 @@ _common:
     begin 
     dasdsad 
     end
+  exposeChirpstack: # creates a service for external access to chirpstack
+    enabled: true 
+    port: 8081
+  exposeGb: # creates a service for external access to chirpstack
+    enabled: true 
+    port: 1700
+  exposeApi: # creates a service for external access to chirpstack
+    enabled: false 
+    port: 8090
   mqtt:
     host: broker.local
     port: 1883

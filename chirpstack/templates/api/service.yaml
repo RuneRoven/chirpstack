@@ -14,3 +14,23 @@ spec:
   selector:
     app: chirpstack-api
   type: {{ .Values.api.service.type | default "ClusterIP" }}
+
+{{- if ((.Values._common).exposeApi).enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: chirpstack-api
+  name: chirpstack-api-external
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  ports:
+  - name: web
+    port: {{ ((.Values._common).exposeApi).port | default .Values.api.service.port }}
+    protocol: TCP
+    targetPort: {{ .Values.gb.service.port }}
+  selector:
+    app: chirpstack-api
+  type: LoadBalancer
+
+{{- end }}

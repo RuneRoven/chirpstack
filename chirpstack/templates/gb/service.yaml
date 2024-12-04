@@ -14,3 +14,23 @@ spec:
   selector:
     app: chirpstack-gb
   type: {{ .Values.chirpstack.service.type | default "ClusterIP" }}
+
+{{- if ((.Values._common).exposeGb).enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: chirpstack-gb
+  name: chirpstack-gb-external
+  namespace: {{ .Values._common.namespace | default "chirpstack" }}
+spec:
+  ports:
+  - name: udp
+    port: {{ ((.Values._common).exposeGb).port | default .Values.gb.service.port }}
+    protocol: UDP
+    targetPort: {{ .Values.gb.service.port }}
+  selector:
+    app: chirpstack-gb
+  type: LoadBalancer
+
+{{- end }}
