@@ -8,12 +8,12 @@ metadata:
 spec:
   ports:
   - name: udp
-    port: {{ .Values.chirpstack.service.port }}
+    port: {{ .Values.gb.service.port }}
     protocol: UDP
-    targetPort: {{ .Values.chirpstack.service.port }}
+    targetPort: {{ .Values.gb.service.port }}
   selector:
     app: chirpstack-gb
-  type: {{ .Values.chirpstack.service.type | default "ClusterIP" }}
+  type: {{ .Values.gb.service.type | default "ClusterIP" }}
 
 # External service
 ---

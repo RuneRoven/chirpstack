@@ -295,10 +295,14 @@ data:
 
     [integration]
       enabled=[
-      {{- range $index, $item := and ((.Values.chirpstack.config).integration).enabled }}
-        "{{ $item }}"{{ if lt $index (sub (len $.Values.chirpstack.config.integration.enabled) 1) }},{{ end }}
+      {{- $defaultIntegrationEnabled := list "mqtt" }}
+      {{- $IntegrationEnabled := ((.Values.chirpstack.config).integration).enabled | default $defaultIntegrationEnabled }}
+      {{- range $index, $item := $IntegrationEnabled }}
+        "{{ $item }}"{{ if lt $index (sub (len $IntegrationEnabled) 1) }},{{ end }}
       {{- end }}
       ]
+
+
 
       {{- ((.Values.chirpstack.config).integration).extra | default "" | nindent 6 }}
       [integration.mqtt]
@@ -311,7 +315,7 @@ data:
         
         json={{ (((.Values.chirpstack.config).integration).mqtt).json | default true }}
         {{- if .Values.chirpstack.useCommonMqttSettings }}
-        server="tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+        server="{{ $.Values._common.mqtt.protocol | default "tcp" }}://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
         username="{{ $mqttUsername }}"
         password="{{ $mqttPassword }}"
         qos={{ $.Values._common.mqtt.qos | default 0 }}
@@ -930,12 +934,12 @@ data:
             topic_prefix = "{{ ((((($region).settings).gateway).backend).mqtt).topicPrefix | default $region.name }}"
 
             {{- if $.Values.chirpstack.useCommonMqttSettings }}
-            server = "tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+            server = "{{ $.Values._common.mqtt.protocol | default "tcp" }}://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
             username = "{{ $mqttUsername }}"
             password = "{{ $mqttPassword }}"
             qos = {{ $.Values._common.mqtt.qos | default 0 }}
             clean_session = {{ $.Values._common.mqtt.cleanSession | default false }}
-            client_id = "{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+            client_id = "{{ ((((($region).settings).gateway).backend).mqtt).server | default $region.name }}" 
             keep_alive_interval="{{ and $.Values._common.mqtt $.Values._common.mqtt.keepAliveInterval | default "30s" }}"  
             ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
             tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
@@ -946,7 +950,7 @@ data:
             password = "{{ ((((($region).settings).gateway).backend).mqtt).password | default "" }}"
             qos = {{ ((((($region).settings).gateway).backend).mqtt).qos | default 2 }}
             clean_session = {{ ((((($region).settings).gateway).backend).mqtt).cleanSession | default true }}
-            client_id = #{{ ((((($region).settings).gateway).backend).mqtt).server | default "chirpstack" }}" 
+            client_id = "{{ ((((($region).settings).gateway).backend).mqtt).server | default $region.name }}" 
             keep_alive_interval="{{ ((((($region).settings).gateway).backend).mqtt).keepAliveInterval | default "30s" }}"  
             ca_cert = "{{ ((((($region).settings).gateway).backend).mqtt).caCert | default "" }}"  
             tls_cert = "{{ ((((($region).settings).gateway).backend).mqtt).tlsCert | default "" }}"  

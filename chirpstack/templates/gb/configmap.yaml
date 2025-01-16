@@ -126,12 +126,12 @@ data:
 
         [integration.mqtt.auth.generic]
         {{- if .Values.gb.useCommonMqttSettings }}
-        servers="tcp://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
+        servers="{{ $.Values._common.mqtt.protocol | default "tcp" }}://{{ $.Values._common.mqtt.host | default "127.0.0.1" }}:{{ $.Values._common.mqtt.port | default "1883" }}"
         username="{{ $mqttUsername }}"
         password="{{ $mqttPassword }}"
         qos={{ $.Values._common.mqtt.qos | default 0 }}
         clean_session={{ $.Values._common.mqtt.cleanSession | default false }}
-        client_id="{{ $.Values._common.mqtt.clientId | default "chirpstack" }}"
+        client_id="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).clientId) | default "00110000" }}"
         ca_cert="{{ $.Values._common.mqtt.caCert | default "" }}"
         tls_cert="{{ $.Values._common.mqtt.tlsCert | default "" }}"
         tls_key="{{ $.Values._common.mqtt.tlsKey | default "" }}"
@@ -146,7 +146,7 @@ data:
         password="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).password) | default "" }}"
         qos={{ ((((((.Values.gb.config).integration).mqtt).auth).generic).qos) | default 0 }}
         clean_session={{ ((((((.Values.gb.config).integration).mqtt).auth).generic).cleanSession) | default false }}
-        client_id="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).clientId) | default "chirpstack" }}"
+        client_id="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).clientId) | default "" }}"
         ca_cert="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).caCert) | default "" }}"
         tls_cert="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).tlsCert) | default "" }}"
         tls_key="{{ ((((((.Values.gb.config).integration).mqtt).auth).generic).tlsKey) | default "" }}"

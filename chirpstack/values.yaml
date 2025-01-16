@@ -106,6 +106,7 @@ chirpstack:
   useCommonMqttSettings: true
   config: 
     logging: 
+      level: "debug"
     postgresql:
     redis: 
     api: 
